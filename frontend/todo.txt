@@ -1,0 +1,6 @@
+make the navbar into component
+
+make items openable
+
+make login and signup
+
