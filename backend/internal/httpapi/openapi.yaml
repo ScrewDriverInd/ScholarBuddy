@@ -1,0 +1,80 @@
+openapi: 3.1.0
+info:
+  title: ScholarBuddy API
+  version: 1.0.0
+  description: Development API reference for ScholarBuddy.
+servers:
+  - url: http://localhost:8080
+paths:
+  /healthz:
+    get:
+      summary: Health check
+      responses: { '200': { description: Service is healthy } }
+  /api/v1/opportunities:
+    get:
+      summary: List opportunities
+      parameters:
+        - { name: type, in: query, schema: { type: string, enum: [all, scholarship, hackathon, internship, research_extra] } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: per_page, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses: { '200': { description: Paginated opportunities } }
+    post:
+      summary: Create an opportunity
+      security: [{ supabaseBearer: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OpportunityInput' } } } }
+      responses: { '201': { description: Opportunity created }, '401': { description: Valid bearer token required } }
+  /api/v1/opportunities/{id}:
+    get:
+      summary: Get an opportunity's complete details
+      parameters: [{ $ref: '#/components/parameters/OpportunityID' }]
+      responses: { '200': { description: Opportunity }, '404': { description: Not found } }
+    patch:
+      summary: Update an opportunity created by the authenticated user
+      security: [{ supabaseBearer: [] }]
+      parameters: [{ $ref: '#/components/parameters/OpportunityID' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OpportunityInput' } } } }
+      responses: { '200': { description: Opportunity updated }, '403': { description: Not owner } }
+  /api/v1/me:
+    get:
+      summary: Get or provision the Google OAuth user
+      security: [{ supabaseBearer: [] }]
+      responses: { '200': { description: Current user } }
+  /api/v1/admin/opportunities:
+    get:
+      summary: List opportunities for the admin dashboard
+      security: [{ adminBearer: [] }]
+      responses: { '200': { description: Paginated opportunities } }
+  /abbujaan/login:
+    post:
+      summary: Sign in to the admin dashboard
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, password, admin_key]
+              properties:
+                user_id: { type: string }
+                password: { type: string, format: password }
+                admin_key: { type: string, format: password }
+      responses: { '200': { description: Admin bearer token }, '401': { description: Invalid credentials } }
+components:
+  securitySchemes:
+    supabaseBearer: { type: http, scheme: bearer, bearerFormat: JWT, description: Supabase Google OAuth access token }
+    adminBearer: { type: http, scheme: bearer, bearerFormat: JWT, description: Token from /abbujaan/login }
+  parameters:
+    OpportunityID: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+  schemas:
+    OpportunityInput:
+      type: object
+      required: [title, description, type]
+      properties:
+        title: { type: string, maxLength: 250 }
+        description: { type: string, maxLength: 10000 }
+        type: { type: string, enum: [scholarship, hackathon, internship, research_extra] }
+        eligibility: { type: string }
+        steps: { type: string }
+        benefits: { type: string }
+        link: { type: string, format: uri }
+        referral: { type: string }
