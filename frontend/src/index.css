@@ -1,0 +1,58 @@
+/* ── Reset & Base ─────────────────────────────────── */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --hn-orange: #ff6600;
+  --hn-bg: #f6f6ef;
+  --hn-header-bg: #ff6600;
+  --hn-text: #828282;
+  --hn-title: #000000;
+  --hn-link: #000000;
+  --hn-link-hover: #ff6600;
+  --hn-border: #e0ddd5;
+  --hn-row-hover: #f0ede4;
+  --hn-chip-bg: transparent;
+  --hn-chip-active-bg: #ff6600;
+  --hn-chip-active-text: #ffffff;
+  --hn-chip-border: #ff6600;
+  --hn-font: Verdana, Geneva, sans-serif;
+}
+
+html {
+  font-size: 14px;
+}
+
+body {
+  font-family: var(--hn-font);
+  background: var(--hn-bg);
+  color: var(--hn-text);
+  line-height: 1.4;
+  min-height: 100vh;
+}
+
+a {
+  color: var(--hn-link);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--hn-link-hover);
+}
+
+#root {
+  max-width: 85%;
+  margin: 0 auto;
+  padding: 0;
+}
+
+@media (max-width: 768px) {
+  #root {
+    max-width: 100%;
+  }
+}
