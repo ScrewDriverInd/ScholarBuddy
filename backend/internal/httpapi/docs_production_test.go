@@ -9,8 +9,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/scholarbuddy/backend/internal/auth"
-	"github.com/scholarbuddy/backend/internal/config"
+	"github.com/ScrewDriverInd/ScholarBuddy/internal/auth"
+	"github.com/ScrewDriverInd/ScholarBuddy/internal/config"
 )
 
 func TestProductionDocsAreUnavailable(t *testing.T) {

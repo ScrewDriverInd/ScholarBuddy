@@ -9,13 +9,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ScrewDriverInd/ScholarBuddy/internal/auth"
+	"github.com/ScrewDriverInd/ScholarBuddy/internal/config"
+	"github.com/ScrewDriverInd/ScholarBuddy/internal/opportunity"
+	"github.com/ScrewDriverInd/ScholarBuddy/internal/platform/httperr"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/scholarbuddy/backend/internal/auth"
-	"github.com/scholarbuddy/backend/internal/config"
-	"github.com/scholarbuddy/backend/internal/opportunity"
-	"github.com/scholarbuddy/backend/internal/platform/httperr"
 )
 
 type API struct {
@@ -46,11 +46,8 @@ func New(store *opportunity.Store, authService *auth.Service, cfg config.Config,
 	return r
 }
 func (a *API) list(w http.ResponseWriter, r *http.Request) {
-	filter := opportunity.Type(r.URL.Query().Get("type"))
-	if filter == "all" {
-		filter = ""
-	}
-	if filter != "" && !filter.Valid() {
+	filter, valid := opportunityFilter(r.URL.Query().Get("type"))
+	if !valid {
 		a.error(w, r, http.StatusBadRequest, "invalid_type", "type is invalid")
 		return
 	}
@@ -61,6 +58,26 @@ func (a *API) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respond(w, http.StatusOK, result)
+}
+
+// opportunityFilter translates the public query value to the database enum.
+// "research" is intentionally the API value while research_extra remains the
+// internal enum used for creation and storage.
+func opportunityFilter(value string) (opportunity.Type, bool) {
+	switch value {
+	case "", "all":
+		return "", true
+	case "research":
+		return opportunity.ResearchExtra, true
+	case string(opportunity.Scholarship):
+		return opportunity.Scholarship, true
+	case string(opportunity.Hackathon):
+		return opportunity.Hackathon, true
+	case string(opportunity.Internship):
+		return opportunity.Internship, true
+	default:
+		return "", false
+	}
 }
 func (a *API) get(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "id"))

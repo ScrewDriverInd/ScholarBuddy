@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ScrewDriverInd/ScholarBuddy/internal/auth"
+	"github.com/ScrewDriverInd/ScholarBuddy/internal/config"
+	"github.com/ScrewDriverInd/ScholarBuddy/internal/httpapi"
+	"github.com/ScrewDriverInd/ScholarBuddy/internal/opportunity"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/scholarbuddy/backend/internal/auth"
-	"github.com/scholarbuddy/backend/internal/config"
-	"github.com/scholarbuddy/backend/internal/httpapi"
-	"github.com/scholarbuddy/backend/internal/opportunity"
 )
 
 func main() {

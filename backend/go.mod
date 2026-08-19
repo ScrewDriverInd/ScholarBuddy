@@ -1,4 +1,4 @@
-module github.com/scholarbuddy/backend
+module github.com/ScrewDriverInd/ScholarBuddy
 
 go 1.26.0
 

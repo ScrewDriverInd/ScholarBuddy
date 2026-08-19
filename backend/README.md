@@ -17,7 +17,7 @@ All responses are JSON envelopes: `{ "data": ... }` or `{ "error": { "code", "me
 | Method | Path | Authentication | Purpose |
 |---|---|---|---|
 | GET | `/healthz` | No | Service health |
-| GET | `/` or `/api/v1/opportunities?type=scholarship` | No | Paginated opportunity list; `type` may be `all`, `scholarship`, `hackathon`, `internship`, or `research_extra` |
+| GET | `/` or `/api/v1/opportunities?type=scholarship` | No | Paginated opportunity list; `type` may be `all`, `scholarship`, `hackathon`, `internship`, or `research` |
 | GET | `/api/v1/opportunities/{id}` | No | Full opportunity details |
 | GET | `/api/v1/me` | Supabase bearer token | Provision/read current user |
 | POST | `/api/v1/opportunities` | Supabase bearer token | Create an opportunity |

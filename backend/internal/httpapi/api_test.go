@@ -9,8 +9,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/scholarbuddy/backend/internal/auth"
-	"github.com/scholarbuddy/backend/internal/config"
+	"github.com/ScrewDriverInd/ScholarBuddy/internal/auth"
+	"github.com/ScrewDriverInd/ScholarBuddy/internal/config"
+	"github.com/ScrewDriverInd/ScholarBuddy/internal/opportunity"
 )
 
 func TestAdminLogin(t *testing.T) {
@@ -39,6 +40,27 @@ func TestAdminLogin(t *testing.T) {
 			if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil || response.Data.Token == "" {
 				t.Fatalf("expected access token: %v", err)
 			}
+		}
+	}
+}
+
+func TestOpportunityFilter(t *testing.T) {
+	tests := []struct {
+		value string
+		want  opportunity.Type
+		valid bool
+	}{
+		{"", "", true},
+		{"all", "", true},
+		{"research", opportunity.ResearchExtra, true},
+		{"scholarship", opportunity.Scholarship, true},
+		{"research_extra", "", false},
+		{"unknown", "", false},
+	}
+	for _, tt := range tests {
+		got, valid := opportunityFilter(tt.value)
+		if got != tt.want || valid != tt.valid {
+			t.Errorf("opportunityFilter(%q) = (%q, %t), want (%q, %t)", tt.value, got, valid, tt.want, tt.valid)
 		}
 	}
 }
