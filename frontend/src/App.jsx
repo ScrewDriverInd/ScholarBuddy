@@ -12,20 +12,6 @@ const TYPES = [
 const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/+$/, '')
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
-const MOCK_DATA = [
-  { id: 1, title: 'INSPIRE Scholarship for Higher Education', link: 'https://www.online-inspire.gov.in', type: 'scholarship' },
-  { id: 2, title: 'Prime Minister\'s Scholarship Scheme', link: 'https://scholarships.gov.in', type: 'scholarship' },
-  { id: 3, title: 'Reliance Foundation Scholarship', link: 'https://www.reliancefoundation.org/scholarships', type: 'scholarship' },
-  { id: 4, title: 'Adobe GenSolve Hackathon 2026', link: 'https://www.adobe.com/gensolve', type: 'hackathon' },
-  { id: 5, title: 'Smart India Hackathon', link: 'https://www.sih.gov.in', type: 'hackathon' },
-  { id: 6, title: 'MLH Global Hack Week', link: 'https://ghw.mlh.io', type: 'hackathon' },
-  { id: 7, title: 'Google STEP Internship', link: 'https://careers.google.com/students', type: 'internship' },
-  { id: 8, title: 'Microsoft Explore Program', link: 'https://careers.microsoft.com/students', type: 'internship' },
-  { id: 9, title: 'Mitacs Globalink Research Internship', link: 'https://www.mitacs.ca/globalink', type: 'internship' },
-  { id: 10, title: 'CERN Summer Student Programme', link: 'https://home.cern/summer-student-programme', type: 'research' },
-  { id: 11, title: 'IISC Summer Research Fellowship', link: 'https://www.iisc.ac.in/srfp', type: 'research' },
-  { id: 12, title: 'NASA L\'SPACE Academy', link: 'https://www.lspace.asu.edu', type: 'research' },
-]
 
 function App() {
   const [activeType, setActiveType] = useState(null)
@@ -61,9 +47,9 @@ function App() {
         // backend returns { data: { items: [], page, per_page, total } }
         const list = Array.isArray(data) ? data
           : Array.isArray(data?.data?.items) ? data.data.items
-          : Array.isArray(data?.data) ? data.data
-          : Array.isArray(data?.items) ? data.items
-          : []
+            : Array.isArray(data?.data) ? data.data
+              : Array.isArray(data?.items) ? data.items
+                : []
         setItems(list)
         setLoading(false)
       })
