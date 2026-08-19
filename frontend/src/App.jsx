@@ -8,10 +8,8 @@ const TYPES = [
   { label: 'research / extra', value: 'research' },
 ]
 
-const API_BASE = '' // same-origin; adjust if backend lives elsewhere
-
-// ── Dummy data (remove when backend is ready) ────────
-const USE_MOCK = true
+const API_BASE = import.meta.env.VITE_API_BASE || ''
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
 const MOCK_DATA = [
   { id: 1, title: 'INSPIRE Scholarship for Higher Education', link: 'https://www.online-inspire.gov.in', type: 'scholarship' },
