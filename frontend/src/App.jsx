@@ -57,7 +57,11 @@ function App() {
         return res.json()
       })
       .then((data) => {
-        setItems(data)
+        // handle both raw arrays and wrapped responses like { data: [...] }
+        const list = Array.isArray(data) ? data
+          : Array.isArray(data?.data) ? data.data
+          : []
+        setItems(list)
         setLoading(false)
       })
       .catch((err) => {
