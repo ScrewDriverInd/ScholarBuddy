@@ -57,9 +57,11 @@ function App() {
         return res.json()
       })
       .then((data) => {
-        // handle both raw arrays and wrapped responses like { data: [...] }
+        // backend returns { data: { items: [], page, per_page, total } }
         const list = Array.isArray(data) ? data
+          : Array.isArray(data?.data?.items) ? data.data.items
           : Array.isArray(data?.data) ? data.data
+          : Array.isArray(data?.items) ? data.items
           : []
         setItems(list)
         setLoading(false)
