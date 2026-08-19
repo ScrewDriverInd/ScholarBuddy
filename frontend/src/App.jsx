@@ -8,7 +8,7 @@ const TYPES = [
   { label: 'research / extra', value: 'research' },
 ]
 
-const API_BASE = import.meta.env.VITE_API_BASE || ''
+const API_BASE = (import.meta.env.VITE_API_BASE || '').replace(/\/+$/, '')
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
 const MOCK_DATA = [
