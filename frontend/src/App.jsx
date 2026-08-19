@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import './App.css'
 
 const TYPES = [
+  { label: 'all', value: null },
   { label: 'scholarship', value: 'scholarship' },
   { label: 'hackathons', value: 'hackathon' },
   { label: 'internships', value: 'internship' },
@@ -77,7 +78,7 @@ function App() {
   }, [activeType])
 
   const handleChipClick = (value) => {
-    setActiveType((prev) => (prev === value ? null : value))
+    setActiveType(value)
   }
 
   return (
