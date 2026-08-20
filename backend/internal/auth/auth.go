@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"crypto/subtle"
 	"errors"
 	"net/http"
 	"strings"
@@ -12,13 +11,24 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lestrrat-go/jwx/v3/jwk"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Principal struct {
 	ID    uuid.UUID
 	Email string
-	Role  string
+	Roles []string
 }
+
+func (p Principal) HasRole(role string) bool {
+	for _, value := range p.Roles {
+		if value == role {
+			return true
+		}
+	}
+	return false
+}
+
 type contextKey struct{}
 
 func FromContext(ctx context.Context) (Principal, bool) {
@@ -48,7 +58,7 @@ func (s *Service) UserMiddleware(next http.Handler) http.Handler {
 func (s *Service) AdminMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p, err := s.internalPrincipal(bearer(r))
-		if err != nil || p.Role != "ROLE_ADMIN" {
+		if err != nil || !p.HasRole("ROLE_ADMIN") {
 			unauthorized(w)
 			return
 		}
@@ -108,16 +118,24 @@ func (s *Service) supabasePrincipal(ctx context.Context, raw string) (Principal,
 	if name != nil {
 		fullName, _ = name["full_name"].(string)
 	}
-	// Every OAuth-created account is deliberately assigned ROLE_USER. Admin access
-	// is issued only by the separate /abbujaan login flow.
-	_, err = s.db.Exec(ctx, "INSERT INTO users (id,email,full_name,role) VALUES ($1,$2,$3,'ROLE_USER') ON CONFLICT (id) DO UPDATE SET email=EXCLUDED.email,full_name=EXCLUDED.full_name,updated_at=now()", id, email, fullName)
+	// Google OAuth accounts are always created with ROLE_USER. Existing database
+	// roles are preserved, including ROLE_ADMIN for administrator accounts.
+	_, err = s.db.Exec(ctx, "INSERT INTO users (id,email,full_name,roles) VALUES ($1,$2,$3,ARRAY['ROLE_USER'::user_role]) ON CONFLICT (id) DO UPDATE SET email=EXCLUDED.email,full_name=EXCLUDED.full_name,updated_at=now()", id, email, fullName)
 	if err != nil {
 		return Principal{}, err
 	}
-	return Principal{ID: id, Email: email, Role: "ROLE_USER"}, nil
+	return Principal{ID: id, Email: email, Roles: []string{"ROLE_USER"}}, nil
 }
-func (s *Service) IssueAdminToken() (string, error) {
-	return jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"role": "ROLE_ADMIN", "sub": "admin", "exp": time.Now().Add(8 * time.Hour).Unix(), "iat": time.Now().Unix()}).SignedString([]byte(s.internalSecret))
+func (s *Service) LoginAdmin(ctx context.Context, username, password string) (string, error) {
+	var id uuid.UUID
+	var passwordHash string
+	if err := s.db.QueryRow(ctx, "SELECT id,password_hash FROM users WHERE username=$1 AND 'ROLE_ADMIN'::user_role = ANY(roles)", username).Scan(&id, &passwordHash); err != nil {
+		return "", err
+	}
+	if passwordHash == "" || bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password)) != nil {
+		return "", errors.New("invalid credentials")
+	}
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"role": "ROLE_ADMIN", "sub": id.String(), "exp": time.Now().Add(8 * time.Hour).Unix(), "iat": time.Now().Unix()}).SignedString([]byte(s.internalSecret))
 }
 func (s *Service) internalPrincipal(raw string) (Principal, error) {
 	claims := jwt.MapClaims{}
@@ -131,8 +149,5 @@ func (s *Service) internalPrincipal(raw string) (Principal, error) {
 		return Principal{}, errors.New("invalid token")
 	}
 	role, _ := claims["role"].(string)
-	return Principal{Role: role}, nil
-}
-func CredentialsMatch(wantUser, wantPassword, wantKey, user, password, key string) bool {
-	return subtle.ConstantTimeCompare([]byte(wantUser), []byte(user))&subtle.ConstantTimeCompare([]byte(wantPassword), []byte(password))&subtle.ConstantTimeCompare([]byte(wantKey), []byte(key)) == 1
+	return Principal{Roles: []string{role}}, nil
 }

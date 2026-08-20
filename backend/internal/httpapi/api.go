@@ -40,9 +40,12 @@ func New(store *opportunity.Store, authService *auth.Service, cfg config.Config,
 		r.With(a.auth.UserMiddleware).Get("/me", a.me)
 		r.With(a.auth.UserMiddleware).Post("/opportunities", a.create)
 		r.With(a.auth.UserMiddleware).Patch("/opportunities/{id}", a.update)
-		r.With(a.auth.AdminMiddleware).Get("/admin/opportunities", a.adminList)
+		r.Post("/abbujaan/login", a.adminLogin)
+		r.With(a.auth.AdminMiddleware).Get("/abbujaan", a.adminList)
+		r.With(a.auth.AdminMiddleware).Get("/abbujaan/opportunities", a.adminList)
+		r.With(a.auth.AdminMiddleware).Patch("/abbujaan/opportunities/{id}/approve", a.approve)
+		r.With(a.auth.AdminMiddleware).Delete("/abbujaan/opportunities/{id}", a.delete)
 	})
-	r.Post("/abbujaan/login", a.adminLogin)
 	return r
 }
 func (a *API) list(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +55,7 @@ func (a *API) list(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	page, perPage := pagination(r)
-	result, err := a.opportunities.List(r.Context(), filter, page, perPage)
+	result, err := a.opportunities.List(r.Context(), filter, opportunity.Approved, page, perPage)
 	if err != nil {
 		a.serverError(w, r, err)
 		return
@@ -85,7 +88,7 @@ func (a *API) get(w http.ResponseWriter, r *http.Request) {
 		a.error(w, r, 400, "invalid_id", "opportunity ID must be a positive number")
 		return
 	}
-	o, err := a.opportunities.Get(r.Context(), id)
+	o, err := a.opportunities.Get(r.Context(), id, opportunity.Approved)
 	if errors.Is(err, pgx.ErrNoRows) {
 		a.error(w, r, 404, "not_found", "opportunity was not found")
 		return
@@ -98,7 +101,7 @@ func (a *API) get(w http.ResponseWriter, r *http.Request) {
 }
 func (a *API) me(w http.ResponseWriter, r *http.Request) {
 	p, _ := auth.FromContext(r.Context())
-	respond(w, 200, map[string]any{"id": p.ID, "email": p.Email, "role": p.Role})
+	respond(w, 200, map[string]any{"id": p.ID, "email": p.Email, "roles": p.Roles})
 }
 func (a *API) create(w http.ResponseWriter, r *http.Request) {
 	in, ok := a.input(w, r)
@@ -157,7 +160,7 @@ func (a *API) input(w http.ResponseWriter, r *http.Request) (opportunity.Input, 
 }
 func (a *API) adminList(w http.ResponseWriter, r *http.Request) {
 	page, perPage := pagination(r)
-	result, err := a.opportunities.List(r.Context(), "", page, perPage)
+	result, err := a.opportunities.List(r.Context(), "", opportunity.Pending, page, perPage)
 	if err != nil {
 		a.serverError(w, r, err)
 		return
@@ -166,24 +169,53 @@ func (a *API) adminList(w http.ResponseWriter, r *http.Request) {
 }
 func (a *API) adminLogin(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		UserID   string `json:"user_id"`
+		Username string `json:"username"`
 		Password string `json:"password"`
-		AdminKey string `json:"admin_key"`
 	}
 	if err := decode(r, &req); err != nil {
 		a.error(w, r, 400, "invalid_json", "request body must be valid JSON")
 		return
 	}
-	if !auth.CredentialsMatch(a.cfg.AdminUserID, a.cfg.AdminPassword, a.cfg.AdminKey, req.UserID, req.Password, req.AdminKey) {
+	token, err := a.auth.LoginAdmin(r.Context(), req.Username, req.Password)
+	if err != nil {
 		a.error(w, r, 401, "invalid_credentials", "admin credentials are invalid")
 		return
 	}
-	token, err := a.auth.IssueAdminToken()
+	respond(w, 200, map[string]any{"access_token": token, "token_type": "Bearer", "roles": []string{"ROLE_USER", "ROLE_ADMIN"}})
+}
+func (a *API) approve(w http.ResponseWriter, r *http.Request) {
+	id, err := opportunityDisplayID(chi.URLParam(r, "id"))
+	if err != nil {
+		a.error(w, r, 400, "invalid_id", "opportunity ID must be a positive number")
+		return
+	}
+	o, err := a.opportunities.Approve(r.Context(), id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		a.error(w, r, 404, "not_found", "pending opportunity was not found")
+		return
+	}
 	if err != nil {
 		a.serverError(w, r, err)
 		return
 	}
-	respond(w, 200, map[string]any{"access_token": token, "token_type": "Bearer", "role": "ROLE_ADMIN"})
+	respond(w, 200, o)
+}
+func (a *API) delete(w http.ResponseWriter, r *http.Request) {
+	id, err := opportunityDisplayID(chi.URLParam(r, "id"))
+	if err != nil {
+		a.error(w, r, 400, "invalid_id", "opportunity ID must be a positive number")
+		return
+	}
+	deleted, err := a.opportunities.Delete(r.Context(), id)
+	if err != nil {
+		a.serverError(w, r, err)
+		return
+	}
+	if !deleted {
+		a.error(w, r, 404, "not_found", "opportunity was not found")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 func decode(r *http.Request, target any) error {
 	d := json.NewDecoder(io.LimitReader(r.Body, 1<<20))

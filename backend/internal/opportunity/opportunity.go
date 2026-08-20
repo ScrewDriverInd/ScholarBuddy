@@ -13,6 +13,12 @@ import (
 )
 
 type Type string
+type ApprovalStatus string
+
+const (
+	Pending  ApprovalStatus = "pending"
+	Approved ApprovalStatus = "approved"
+)
 
 const (
 	Scholarship Type = "scholarship"
@@ -27,19 +33,20 @@ func (t Type) Valid() bool {
 }
 
 type Opportunity struct {
-	ID          int64 `json:"id"`
-	recordID    uuid.UUID
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Types       []Type    `json:"types"`
-	Eligibility string    `json:"eligibility"`
-	Steps       string    `json:"steps"`
-	Benefits    string    `json:"benefits"`
-	Link        string    `json:"link"`
-	Referral    string    `json:"referral"`
-	CreatedBy   uuid.UUID `json:"created_by"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID             int64 `json:"id"`
+	recordID       uuid.UUID
+	Title          string         `json:"title"`
+	Description    string         `json:"description"`
+	Types          []Type         `json:"types"`
+	Eligibility    string         `json:"eligibility"`
+	Steps          string         `json:"steps"`
+	Benefits       string         `json:"benefits"`
+	Link           string         `json:"link"`
+	Referral       string         `json:"referral"`
+	CreatedBy      uuid.UUID      `json:"created_by"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	ApprovalStatus ApprovalStatus `json:"approval_status"`
 }
 type Input struct {
 	Title       string `json:"title"`
@@ -96,23 +103,23 @@ type Store struct{ db *pgxpool.Pool }
 
 func NewStore(db *pgxpool.Pool) *Store { return &Store{db: db} }
 
-const columns = "display_id,id,title,description,types,eligibility,steps,benefits,link,referral,created_by,created_at,updated_at"
+const columns = "display_id,id,title,description,types,eligibility,steps,benefits,link,referral,created_by,created_at,updated_at,approval_status"
 
 func scan(row interface{ Scan(...any) error }) (Opportunity, error) {
 	var o Opportunity
 	var types []string
-	err := row.Scan(&o.ID, &o.recordID, &o.Title, &o.Description, &types, &o.Eligibility, &o.Steps, &o.Benefits, &o.Link, &o.Referral, &o.CreatedBy, &o.CreatedAt, &o.UpdatedAt)
+	err := row.Scan(&o.ID, &o.recordID, &o.Title, &o.Description, &types, &o.Eligibility, &o.Steps, &o.Benefits, &o.Link, &o.Referral, &o.CreatedBy, &o.CreatedAt, &o.UpdatedAt, &o.ApprovalStatus)
 	o.Types = make([]Type, len(types))
 	for index, value := range types {
 		o.Types[index] = Type(value)
 	}
 	return o, err
 }
-func (s *Store) List(ctx context.Context, filter Type, page, perPage int) (Page, error) {
+func (s *Store) List(ctx context.Context, filter Type, status ApprovalStatus, page, perPage int) (Page, error) {
 	p := Page{Items: []Opportunity{}, Page: page, PerPage: perPage}
-	where, args := "", []any{}
+	where, args := " WHERE approval_status=$1", []any{status}
 	if filter != "" {
-		where = " WHERE $1::opportunity_type = ANY(types)"
+		where += " AND $2::opportunity_type = ANY(types)"
 		args = append(args, filter)
 	}
 	if err := s.db.QueryRow(ctx, "SELECT count(*) FROM opportunities"+where, args...).Scan(&p.Total); err != nil {
@@ -133,14 +140,24 @@ func (s *Store) List(ctx context.Context, filter Type, page, perPage int) (Page,
 	}
 	return p, rows.Err()
 }
-func (s *Store) Get(ctx context.Context, displayID int64) (Opportunity, error) {
-	return scan(s.db.QueryRow(ctx, "SELECT "+columns+" FROM opportunities WHERE display_id=$1", displayID))
+func (s *Store) Get(ctx context.Context, displayID int64, status ApprovalStatus) (Opportunity, error) {
+	return scan(s.db.QueryRow(ctx, "SELECT "+columns+" FROM opportunities WHERE display_id=$1 AND approval_status=$2", displayID, status))
 }
 func (s *Store) Create(ctx context.Context, in Input, userID uuid.UUID) (Opportunity, error) {
 	return scan(s.db.QueryRow(ctx, "INSERT INTO opportunities (title,description,types,eligibility,steps,benefits,link,referral,created_by) VALUES ($1,$2,$3::opportunity_type[],$4,$5,$6,$7,$8,$9) RETURNING "+columns, in.Title, in.Description, typeStrings(in.Types), in.Eligibility, in.Steps, in.Benefits, in.Link, in.Referral, userID))
 }
 func (s *Store) Update(ctx context.Context, displayID int64, userID uuid.UUID, in Input) (Opportunity, error) {
-	return scan(s.db.QueryRow(ctx, "UPDATE opportunities SET title=$1,description=$2,types=$3::opportunity_type[],eligibility=$4,steps=$5,benefits=$6,link=$7,referral=$8,updated_at=now() WHERE display_id=$9 AND created_by=$10 RETURNING "+columns, in.Title, in.Description, typeStrings(in.Types), in.Eligibility, in.Steps, in.Benefits, in.Link, in.Referral, displayID, userID))
+	return scan(s.db.QueryRow(ctx, "UPDATE opportunities SET title=$1,description=$2,types=$3::opportunity_type[],eligibility=$4,steps=$5,benefits=$6,link=$7,referral=$8,approval_status='pending',updated_at=now() WHERE display_id=$9 AND created_by=$10 RETURNING "+columns, in.Title, in.Description, typeStrings(in.Types), in.Eligibility, in.Steps, in.Benefits, in.Link, in.Referral, displayID, userID))
+}
+func (s *Store) Approve(ctx context.Context, displayID int64) (Opportunity, error) {
+	return scan(s.db.QueryRow(ctx, "UPDATE opportunities SET approval_status='approved',updated_at=now() WHERE display_id=$1 AND approval_status='pending' RETURNING "+columns, displayID))
+}
+func (s *Store) Delete(ctx context.Context, displayID int64) (bool, error) {
+	result, err := s.db.Exec(ctx, "DELETE FROM opportunities WHERE display_id=$1", displayID)
+	if err != nil {
+		return false, err
+	}
+	return result.RowsAffected() == 1, nil
 }
 
 func typeStrings(types []Type) []string {

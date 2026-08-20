@@ -14,7 +14,7 @@ import (
 )
 
 func TestProductionDocsAreUnavailable(t *testing.T) {
-	cfg := config.Config{AuthJWTSecret: "this-is-a-test-secret-that-is-long-enough", AdminUserID: "admin", AdminPassword: "password", AdminKey: "key"}
+	cfg := config.Config{AuthJWTSecret: "this-is-a-test-secret-that-is-long-enough"}
 	h := New(nil, auth.NewService(nil, "", cfg.AuthJWTSecret), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/docs/openapi.yaml", nil))

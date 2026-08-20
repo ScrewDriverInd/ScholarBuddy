@@ -39,12 +39,29 @@ paths:
       summary: Get or provision the Google OAuth user
       security: [{ supabaseBearer: [] }]
       responses: { '200': { description: Current user } }
-  /api/v1/admin/opportunities:
+  /api/v1/abbujaan:
     get:
-      summary: List opportunities for the admin dashboard
+      summary: List pending opportunities for the admin dashboard
       security: [{ adminBearer: [] }]
       responses: { '200': { description: Paginated opportunities } }
-  /abbujaan/login:
+  /api/v1/abbujaan/opportunities:
+    get:
+      summary: List pending opportunities for approval
+      security: [{ adminBearer: [] }]
+      responses: { '200': { description: Paginated opportunities } }
+  /api/v1/abbujaan/opportunities/{id}/approve:
+    patch:
+      summary: Approve a pending opportunity
+      security: [{ adminBearer: [] }]
+      parameters: [{ $ref: '#/components/parameters/OpportunityID' }]
+      responses: { '200': { description: Opportunity approved } }
+  /api/v1/abbujaan/opportunities/{id}:
+    delete:
+      summary: Delete an opportunity
+      security: [{ adminBearer: [] }]
+      parameters: [{ $ref: '#/components/parameters/OpportunityID' }]
+      responses: { '204': { description: Opportunity deleted } }
+  /api/v1/abbujaan/login:
     post:
       summary: Sign in to the admin dashboard
       requestBody:
@@ -53,16 +70,15 @@ paths:
           application/json:
             schema:
               type: object
-              required: [user_id, password, admin_key]
+              required: [username, password]
               properties:
-                user_id: { type: string }
+                username: { type: string }
                 password: { type: string, format: password }
-                admin_key: { type: string, format: password }
       responses: { '200': { description: Admin bearer token }, '401': { description: Invalid credentials } }
 components:
   securitySchemes:
     supabaseBearer: { type: http, scheme: bearer, bearerFormat: JWT, description: Supabase Google OAuth access token }
-    adminBearer: { type: http, scheme: bearer, bearerFormat: JWT, description: Token from /abbujaan/login }
+    adminBearer: { type: http, scheme: bearer, bearerFormat: JWT, description: Token from /api/v1/abbujaan/login }
   parameters:
     OpportunityID: { name: id, in: path, required: true, schema: { type: integer, minimum: 1 }, description: Public numeric opportunity ID }
   schemas:

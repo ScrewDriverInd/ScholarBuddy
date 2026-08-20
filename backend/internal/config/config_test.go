@@ -8,9 +8,6 @@ func setRequiredEnv(t *testing.T) {
 	t.Setenv("SUPABASE_URL", "https://example.supabase.co")
 	t.Setenv("SUPABASE_JWKS_URL", "")
 	t.Setenv("AUTH_JWT_SECRET", "this-secret-is-longer-than-thirty-two-characters")
-	t.Setenv("ADMIN_USER_ID", "admin")
-	t.Setenv("ADMIN_PASSWORD", "password")
-	t.Setenv("ADMIN_KEY", "admin-key")
 }
 
 func TestLoadDerivesJWKSURLAndParsesCORS(t *testing.T) {

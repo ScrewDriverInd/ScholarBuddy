@@ -2,11 +2,9 @@ package auth
 
 import "testing"
 
-func TestCredentialsMatch(t *testing.T) {
-	if !CredentialsMatch("admin", "password", "key", "admin", "password", "key") {
-		t.Fatal("expected valid credentials to match")
-	}
-	if CredentialsMatch("admin", "password", "key", "admin", "wrong", "key") {
-		t.Fatal("expected invalid credentials not to match")
+func TestPrincipalHasRole(t *testing.T) {
+	p := Principal{Roles: []string{"ROLE_USER", "ROLE_ADMIN"}}
+	if !p.HasRole("ROLE_ADMIN") || !p.HasRole("ROLE_USER") || p.HasRole("ROLE_UNKNOWN") {
+		t.Fatal("role membership is incorrect")
 	}
 }
