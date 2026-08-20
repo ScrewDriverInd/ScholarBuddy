@@ -60,29 +60,29 @@ func (a *API) list(w http.ResponseWriter, r *http.Request) {
 	respond(w, http.StatusOK, result)
 }
 
-// opportunityFilter translates the public query value to the database enum.
-// "research" is intentionally the API value while research_extra remains the
-// internal enum used for creation and storage.
+// opportunityFilter accepts only the public opportunity enum values.
 func opportunityFilter(value string) (opportunity.Type, bool) {
 	switch value {
 	case "", "all":
 		return "", true
-	case "research":
-		return opportunity.ResearchExtra, true
 	case string(opportunity.Scholarship):
 		return opportunity.Scholarship, true
 	case string(opportunity.Hackathon):
 		return opportunity.Hackathon, true
 	case string(opportunity.Internship):
 		return opportunity.Internship, true
+	case string(opportunity.Research):
+		return opportunity.Research, true
+	case string(opportunity.Extras):
+		return opportunity.Extras, true
 	default:
 		return "", false
 	}
 }
 func (a *API) get(w http.ResponseWriter, r *http.Request) {
-	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	id, err := opportunityDisplayID(chi.URLParam(r, "id"))
 	if err != nil {
-		a.error(w, r, 400, "invalid_id", "opportunity ID must be a UUID")
+		a.error(w, r, 400, "invalid_id", "opportunity ID must be a positive number")
 		return
 	}
 	o, err := a.opportunities.Get(r.Context(), id)
@@ -114,9 +114,9 @@ func (a *API) create(w http.ResponseWriter, r *http.Request) {
 	respond(w, 201, o)
 }
 func (a *API) update(w http.ResponseWriter, r *http.Request) {
-	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	id, err := opportunityDisplayID(chi.URLParam(r, "id"))
 	if err != nil {
-		a.error(w, r, 400, "invalid_id", "opportunity ID must be a UUID")
+		a.error(w, r, 400, "invalid_id", "opportunity ID must be a positive number")
 		return
 	}
 	in, ok := a.input(w, r)
@@ -134,6 +134,14 @@ func (a *API) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respond(w, 200, o)
+}
+
+func opportunityDisplayID(value string) (int64, error) {
+	id, err := strconv.ParseInt(value, 10, 64)
+	if err != nil || id < 1 {
+		return 0, errors.New("invalid display ID")
+	}
+	return id, nil
 }
 func (a *API) input(w http.ResponseWriter, r *http.Request) (opportunity.Input, bool) {
 	var in opportunity.Input

@@ -15,21 +15,23 @@ import (
 type Type string
 
 const (
-	Scholarship   Type = "scholarship"
-	Hackathon     Type = "hackathon"
-	Internship    Type = "internship"
-	ResearchExtra Type = "research_extra"
+	Scholarship Type = "scholarship"
+	Hackathon   Type = "hackathon"
+	Internship  Type = "internship"
+	Research    Type = "research"
+	Extras      Type = "extras"
 )
 
 func (t Type) Valid() bool {
-	return t == Scholarship || t == Hackathon || t == Internship || t == ResearchExtra
+	return t == Scholarship || t == Hackathon || t == Internship || t == Research || t == Extras
 }
 
 type Opportunity struct {
-	ID          uuid.UUID `json:"id"`
+	ID          int64 `json:"id"`
+	recordID    uuid.UUID
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
-	Type        Type      `json:"type"`
+	Types       []Type    `json:"types"`
 	Eligibility string    `json:"eligibility"`
 	Steps       string    `json:"steps"`
 	Benefits    string    `json:"benefits"`
@@ -42,7 +44,7 @@ type Opportunity struct {
 type Input struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
-	Type        Type   `json:"type"`
+	Types       []Type `json:"types"`
 	Eligibility string `json:"eligibility"`
 	Steps       string `json:"steps"`
 	Benefits    string `json:"benefits"`
@@ -59,8 +61,21 @@ func (i Input) Validate() error {
 	if i.Description == "" || len(i.Description) > 10000 {
 		return errors.New("description must be between 1 and 10000 characters")
 	}
-	if !i.Type.Valid() {
-		return errors.New("type must be scholarship, hackathon, internship, or research_extra")
+	if len(i.Types) == 0 {
+		return errors.New("types must contain at least one opportunity type")
+	}
+	if len(i.Types) > 5 {
+		return errors.New("types cannot contain more than 5 opportunity types")
+	}
+	seen := make(map[Type]struct{}, len(i.Types))
+	for _, opportunityType := range i.Types {
+		if !opportunityType.Valid() {
+			return errors.New("types must contain scholarship, hackathon, internship, research, or extras")
+		}
+		if _, exists := seen[opportunityType]; exists {
+			return errors.New("types cannot contain duplicate opportunity types")
+		}
+		seen[opportunityType] = struct{}{}
 	}
 	if i.Link != "" {
 		u, err := url.ParseRequestURI(i.Link)
@@ -81,18 +96,23 @@ type Store struct{ db *pgxpool.Pool }
 
 func NewStore(db *pgxpool.Pool) *Store { return &Store{db: db} }
 
-const columns = "id,title,description,type,eligibility,steps,benefits,link,referral,created_by,created_at,updated_at"
+const columns = "display_id,id,title,description,types,eligibility,steps,benefits,link,referral,created_by,created_at,updated_at"
 
 func scan(row interface{ Scan(...any) error }) (Opportunity, error) {
 	var o Opportunity
-	err := row.Scan(&o.ID, &o.Title, &o.Description, &o.Type, &o.Eligibility, &o.Steps, &o.Benefits, &o.Link, &o.Referral, &o.CreatedBy, &o.CreatedAt, &o.UpdatedAt)
+	var types []string
+	err := row.Scan(&o.ID, &o.recordID, &o.Title, &o.Description, &types, &o.Eligibility, &o.Steps, &o.Benefits, &o.Link, &o.Referral, &o.CreatedBy, &o.CreatedAt, &o.UpdatedAt)
+	o.Types = make([]Type, len(types))
+	for index, value := range types {
+		o.Types[index] = Type(value)
+	}
 	return o, err
 }
 func (s *Store) List(ctx context.Context, filter Type, page, perPage int) (Page, error) {
 	p := Page{Items: []Opportunity{}, Page: page, PerPage: perPage}
 	where, args := "", []any{}
 	if filter != "" {
-		where = " WHERE type=$1"
+		where = " WHERE $1::opportunity_type = ANY(types)"
 		args = append(args, filter)
 	}
 	if err := s.db.QueryRow(ctx, "SELECT count(*) FROM opportunities"+where, args...).Scan(&p.Total); err != nil {
@@ -113,12 +133,20 @@ func (s *Store) List(ctx context.Context, filter Type, page, perPage int) (Page,
 	}
 	return p, rows.Err()
 }
-func (s *Store) Get(ctx context.Context, id uuid.UUID) (Opportunity, error) {
-	return scan(s.db.QueryRow(ctx, "SELECT "+columns+" FROM opportunities WHERE id=$1", id))
+func (s *Store) Get(ctx context.Context, displayID int64) (Opportunity, error) {
+	return scan(s.db.QueryRow(ctx, "SELECT "+columns+" FROM opportunities WHERE display_id=$1", displayID))
 }
 func (s *Store) Create(ctx context.Context, in Input, userID uuid.UUID) (Opportunity, error) {
-	return scan(s.db.QueryRow(ctx, "INSERT INTO opportunities (title,description,type,eligibility,steps,benefits,link,referral,created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING "+columns, in.Title, in.Description, in.Type, in.Eligibility, in.Steps, in.Benefits, in.Link, in.Referral, userID))
+	return scan(s.db.QueryRow(ctx, "INSERT INTO opportunities (title,description,types,eligibility,steps,benefits,link,referral,created_by) VALUES ($1,$2,$3::opportunity_type[],$4,$5,$6,$7,$8,$9) RETURNING "+columns, in.Title, in.Description, typeStrings(in.Types), in.Eligibility, in.Steps, in.Benefits, in.Link, in.Referral, userID))
 }
-func (s *Store) Update(ctx context.Context, id, userID uuid.UUID, in Input) (Opportunity, error) {
-	return scan(s.db.QueryRow(ctx, "UPDATE opportunities SET title=$1,description=$2,type=$3,eligibility=$4,steps=$5,benefits=$6,link=$7,referral=$8,updated_at=now() WHERE id=$9 AND created_by=$10 RETURNING "+columns, in.Title, in.Description, in.Type, in.Eligibility, in.Steps, in.Benefits, in.Link, in.Referral, id, userID))
+func (s *Store) Update(ctx context.Context, displayID int64, userID uuid.UUID, in Input) (Opportunity, error) {
+	return scan(s.db.QueryRow(ctx, "UPDATE opportunities SET title=$1,description=$2,types=$3::opportunity_type[],eligibility=$4,steps=$5,benefits=$6,link=$7,referral=$8,updated_at=now() WHERE display_id=$9 AND created_by=$10 RETURNING "+columns, in.Title, in.Description, typeStrings(in.Types), in.Eligibility, in.Steps, in.Benefits, in.Link, in.Referral, displayID, userID))
+}
+
+func typeStrings(types []Type) []string {
+	values := make([]string, len(types))
+	for index, value := range types {
+		values[index] = string(value)
+	}
+	return values
 }

@@ -52,7 +52,8 @@ func TestOpportunityFilter(t *testing.T) {
 	}{
 		{"", "", true},
 		{"all", "", true},
-		{"research", opportunity.ResearchExtra, true},
+		{"research", opportunity.Research, true},
+		{"extras", opportunity.Extras, true},
 		{"scholarship", opportunity.Scholarship, true},
 		{"research_extra", "", false},
 		{"unknown", "", false},
@@ -62,5 +63,17 @@ func TestOpportunityFilter(t *testing.T) {
 		if got != tt.want || valid != tt.valid {
 			t.Errorf("opportunityFilter(%q) = (%q, %t), want (%q, %t)", tt.value, got, valid, tt.want, tt.valid)
 		}
+	}
+}
+
+func TestOpportunityDisplayID(t *testing.T) {
+	for _, value := range []string{"0", "-1", "abc", "550e8400-e29b-41d4-a716-446655440000"} {
+		if _, err := opportunityDisplayID(value); err == nil {
+			t.Errorf("opportunityDisplayID(%q) succeeded, want error", value)
+		}
+	}
+	got, err := opportunityDisplayID("42")
+	if err != nil || got != 42 {
+		t.Errorf("opportunityDisplayID(42) = (%d, %v), want (42, nil)", got, err)
 	}
 }

@@ -1,6 +1,6 @@
 # ScholarBuddy API
 
-Go backend for opportunities (scholarships, hackathons, internships, research/extra).
+Go backend for opportunities (scholarships, hackathons, internships, research, and extras).
 
 ## Quick start
 
@@ -17,7 +17,7 @@ All responses are JSON envelopes: `{ "data": ... }` or `{ "error": { "code", "me
 | Method | Path | Authentication | Purpose |
 |---|---|---|---|
 | GET | `/healthz` | No | Service health |
-| GET | `/` or `/api/v1/opportunities?type=scholarship` | No | Paginated opportunity list; `type` may be `all`, `scholarship`, `hackathon`, `internship`, or `research` |
+| GET | `/` or `/api/v1/opportunities?type=scholarship` | No | Paginated opportunity list; `type` may be `all`, `scholarship`, `hackathon`, `internship`, `research`, or `extras` |
 | GET | `/api/v1/opportunities/{id}` | No | Full opportunity details |
 | GET | `/api/v1/me` | Supabase bearer token | Provision/read current user |
 | POST | `/api/v1/opportunities` | Supabase bearer token | Create an opportunity |
@@ -27,4 +27,6 @@ All responses are JSON envelopes: `{ "data": ... }` or `{ "error": { "code", "me
 
 For Google login, the frontend should call Supabase OAuth and send the returned access token as `Authorization: Bearer <token>` to protected routes. New accounts are always provisioned as `ROLE_USER`.
 
-Create/update request fields: `title`, `description`, `type`, `eligibility`, `steps`, `benefits`, `link`, `referral`. `type` must use the values above.
+Create/update request fields: `title`, `description`, `types`, `eligibility`, `steps`, `benefits`, `link`, `referral`. `types` is a required, non-empty array using any combination of `scholarship`, `hackathon`, `internship`, `research`, and `extras`.
+
+Opportunity responses expose a stable numeric `id` for tables and routes. UUID primary keys remain internal to the backend.
