@@ -13,6 +13,10 @@
   color: #000;
   letter-spacing: 0.02em;
   white-space: nowrap;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--hn-font);
 }
 
 .header__tagline {
@@ -92,6 +96,122 @@
 /* ── Table ────────────────────────────────────────── */
 .table-wrap {
   overflow-x: auto;
+}
+
+.ranking-note {
+  padding: 5px 8px;
+  font-size: 10px;
+  color: var(--hn-text);
+  text-align: right;
+}
+
+.title-button,
+.back-button,
+.admin-actions button {
+  font: inherit;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.title-button {
+  color: var(--hn-title);
+  text-align: left;
+}
+
+.title-button:hover,
+.back-button:hover {
+  color: var(--hn-orange);
+  text-decoration: underline;
+}
+
+.col-clicks {
+  text-align: right;
+  width: 60px;
+  color: var(--hn-text);
+}
+
+.detail,
+.admin-panel {
+  max-width: 760px;
+  padding: 18px 14px 28px;
+}
+
+.detail h1,
+.admin-panel h1 {
+  color: var(--hn-title);
+  font-size: 18px;
+  margin: 12px 0 4px;
+}
+
+.back-button {
+  color: var(--hn-orange);
+  font-size: 12px;
+}
+
+.detail__meta {
+  font-size: 11px;
+  color: var(--hn-text);
+  margin-bottom: 18px;
+}
+
+.detail__description,
+.detail__section p {
+  color: #333;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+.detail__section {
+  margin-top: 18px;
+}
+
+.detail__section h2 {
+  color: var(--hn-title);
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+
+.detail__link {
+  display: inline-block;
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--hn-orange);
+}
+
+.admin-form {
+  margin-top: 16px;
+  max-width: 300px;
+  display: grid;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--hn-title);
+}
+
+.admin-form label {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-form input {
+  font: inherit;
+  padding: 5px;
+  border: 1px solid var(--hn-border);
+  background: #fff;
+}
+
+.admin-form button,
+.admin-actions button {
+  width: fit-content;
+  padding: 4px 8px;
+  background: var(--hn-orange);
+  color: #fff;
+  font-size: 11px;
+}
+
+.admin-actions button + button {
+  margin-left: 5px;
+  background: #828282;
 }
 
 .data-table {
