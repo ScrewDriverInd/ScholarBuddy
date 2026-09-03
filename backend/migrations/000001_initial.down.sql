@@ -1,4 +1,5 @@
-DROP TABLE opportunities;
-DROP TABLE users;
-DROP TYPE opportunity_type;
-DROP TYPE user_role;
+DROP TABLE IF EXISTS opportunities;
+DROP TABLE IF EXISTS users;
+DROP TYPE IF EXISTS approval_status;
+DROP TYPE IF EXISTS opportunity_type;
+DROP TYPE IF EXISTS user_role;

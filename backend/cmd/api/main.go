@@ -29,13 +29,15 @@ func main() {
 		os.Exit(1)
 	}
 	defer db.Close()
-	if err := db.Ping(ctx); err != nil {
+	startupCtx, startupCancel := context.WithTimeout(ctx, 10*time.Second)
+	defer startupCancel()
+	if err := db.Ping(startupCtx); err != nil {
 		slog.Error("database ping failed", "error", err)
 		os.Exit(1)
 	}
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	h := httpapi.New(opportunity.NewStore(db), auth.NewService(db, cfg.SupabaseJWKSURL, cfg.AuthJWTSecret), cfg, log)
-	server := &http.Server{Addr: cfg.HTTPAddr, Handler: h, ReadHeaderTimeout: 5 * time.Second}
+	server := &http.Server{Addr: cfg.HTTPAddr, Handler: h, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second}
 	go func() {
 		log.Info("server listening", "address", cfg.HTTPAddr)
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {

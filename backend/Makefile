@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help run build build-prod test test-race lint fmt tidy migrate-up migrate-down
+.PHONY: help run build build-prod test test-race lint fmt tidy migrate-up migrate-down db-reset
 
 help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*##"}; /^[a-zA-Z_-]+:.*##/ {printf "%-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -26,8 +26,11 @@ fmt: ## Format Go source files
 tidy: ## Synchronize Go module dependencies
 	go mod tidy
 
-migrate-up: ## Apply database migrations (requires golang-migrate)
-	migrate -path migrations -database "$$DATABASE_URL" up
+migrate-up: ## Apply the schema migration using the built-in Go runner
+	@set -a; [ ! -f .env ] || . ./.env; set +a; go run ./cmd/migrate up
 
-migrate-down: ## Roll back the latest database migration (requires golang-migrate)
-	migrate -path migrations -database "$$DATABASE_URL" down 1
+migrate-down: ## Roll back the schema migration using the built-in Go runner
+	@set -a; [ ! -f .env ] || . ./.env; set +a; go run ./cmd/migrate down
+
+db-reset: ## DESTRUCTIVE: erase ScholarBuddy tables and migration history
+	@set -a; [ ! -f .env ] || . ./.env; set +a; go run ./cmd/migrate reset

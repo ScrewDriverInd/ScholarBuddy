@@ -10,6 +10,10 @@ paths:
     get:
       summary: Health check
       responses: { '200': { description: Service is healthy } }
+  /:
+    get:
+      summary: Welcome message
+      responses: { '200': { description: Welcome message } }
   /api/v1/opportunities:
     get:
       summary: List opportunities
@@ -34,19 +38,9 @@ paths:
       parameters: [{ $ref: '#/components/parameters/OpportunityID' }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OpportunityInput' } } } }
       responses: { '200': { description: Opportunity updated }, '403': { description: Not owner } }
-  /api/v1/me:
-    get:
-      summary: Get or provision the Google OAuth user
-      security: [{ supabaseBearer: [] }]
-      responses: { '200': { description: Current user } }
-  /api/v1/abbujaan:
-    get:
-      summary: List pending opportunities for the admin dashboard
-      security: [{ adminBearer: [] }]
-      responses: { '200': { description: Paginated opportunities } }
   /api/v1/abbujaan/opportunities:
     get:
-      summary: List pending opportunities for approval
+      summary: List pending opportunities for the admin dashboard
       security: [{ adminBearer: [] }]
       responses: { '200': { description: Paginated opportunities } }
   /api/v1/abbujaan/opportunities/{id}/approve:
@@ -80,7 +74,7 @@ components:
     supabaseBearer: { type: http, scheme: bearer, bearerFormat: JWT, description: Supabase Google OAuth access token }
     adminBearer: { type: http, scheme: bearer, bearerFormat: JWT, description: Token from /api/v1/abbujaan/login }
   parameters:
-    OpportunityID: { name: id, in: path, required: true, schema: { type: integer, minimum: 1 }, description: Public numeric opportunity ID }
+    OpportunityID: { name: id, in: path, required: true, schema: { type: string, format: uuid }, description: Opportunity UUID }
   schemas:
     OpportunityInput:
       type: object

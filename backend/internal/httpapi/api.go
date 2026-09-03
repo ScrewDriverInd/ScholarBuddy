@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ScrewDriverInd/ScholarBuddy/internal/auth"
 	"github.com/ScrewDriverInd/ScholarBuddy/internal/config"
@@ -28,20 +30,20 @@ type API struct {
 func New(store *opportunity.Store, authService *auth.Service, cfg config.Config, log *slog.Logger) http.Handler {
 	a := &API{opportunities: store, auth: authService, cfg: cfg, log: log}
 	r := chi.NewRouter()
-	r.Use(a.requestID, a.recover, a.cors)
+	r.Use(a.requestID, a.recover, a.requestTimeout, a.cors)
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		respond(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
 	registerDocs(r)
-	r.Get("/", a.list)
+	r.Get("/", func(w http.ResponseWriter, _ *http.Request) {
+		respond(w, http.StatusOK, map[string]string{"message": "Welcome to ScholarBuddy"})
+	})
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/opportunities", a.list)
 		r.Get("/opportunities/{id}", a.get)
-		r.With(a.auth.UserMiddleware).Get("/me", a.me)
 		r.With(a.auth.UserMiddleware).Post("/opportunities", a.create)
 		r.With(a.auth.UserMiddleware).Patch("/opportunities/{id}", a.update)
 		r.Post("/abbujaan/login", a.adminLogin)
-		r.With(a.auth.AdminMiddleware).Get("/abbujaan", a.adminList)
 		r.With(a.auth.AdminMiddleware).Get("/abbujaan/opportunities", a.adminList)
 		r.With(a.auth.AdminMiddleware).Patch("/abbujaan/opportunities/{id}/approve", a.approve)
 		r.With(a.auth.AdminMiddleware).Delete("/abbujaan/opportunities/{id}", a.delete)
@@ -83,12 +85,12 @@ func opportunityFilter(value string) (opportunity.Type, bool) {
 	}
 }
 func (a *API) get(w http.ResponseWriter, r *http.Request) {
-	id, err := opportunityDisplayID(chi.URLParam(r, "id"))
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		a.error(w, r, 400, "invalid_id", "opportunity ID must be a positive number")
+		a.error(w, r, 400, "invalid_id", "opportunity ID must be a UUID")
 		return
 	}
-	o, err := a.opportunities.Get(r.Context(), id, opportunity.Approved)
+	o, err := a.opportunities.GetAndRecordClick(r.Context(), id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		a.error(w, r, 404, "not_found", "opportunity was not found")
 		return
@@ -98,10 +100,6 @@ func (a *API) get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respond(w, 200, o)
-}
-func (a *API) me(w http.ResponseWriter, r *http.Request) {
-	p, _ := auth.FromContext(r.Context())
-	respond(w, 200, map[string]any{"id": p.ID, "email": p.Email, "roles": p.Roles})
 }
 func (a *API) create(w http.ResponseWriter, r *http.Request) {
 	in, ok := a.input(w, r)
@@ -117,9 +115,9 @@ func (a *API) create(w http.ResponseWriter, r *http.Request) {
 	respond(w, 201, o)
 }
 func (a *API) update(w http.ResponseWriter, r *http.Request) {
-	id, err := opportunityDisplayID(chi.URLParam(r, "id"))
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		a.error(w, r, 400, "invalid_id", "opportunity ID must be a positive number")
+		a.error(w, r, 400, "invalid_id", "opportunity ID must be a UUID")
 		return
 	}
 	in, ok := a.input(w, r)
@@ -139,13 +137,6 @@ func (a *API) update(w http.ResponseWriter, r *http.Request) {
 	respond(w, 200, o)
 }
 
-func opportunityDisplayID(value string) (int64, error) {
-	id, err := strconv.ParseInt(value, 10, 64)
-	if err != nil || id < 1 {
-		return 0, errors.New("invalid display ID")
-	}
-	return id, nil
-}
 func (a *API) input(w http.ResponseWriter, r *http.Request) (opportunity.Input, bool) {
 	var in opportunity.Input
 	if err := decode(r, &in); err != nil {
@@ -184,9 +175,9 @@ func (a *API) adminLogin(w http.ResponseWriter, r *http.Request) {
 	respond(w, 200, map[string]any{"access_token": token, "token_type": "Bearer", "roles": []string{"ROLE_USER", "ROLE_ADMIN"}})
 }
 func (a *API) approve(w http.ResponseWriter, r *http.Request) {
-	id, err := opportunityDisplayID(chi.URLParam(r, "id"))
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		a.error(w, r, 400, "invalid_id", "opportunity ID must be a positive number")
+		a.error(w, r, 400, "invalid_id", "opportunity ID must be a UUID")
 		return
 	}
 	o, err := a.opportunities.Approve(r.Context(), id)
@@ -201,9 +192,9 @@ func (a *API) approve(w http.ResponseWriter, r *http.Request) {
 	respond(w, 200, o)
 }
 func (a *API) delete(w http.ResponseWriter, r *http.Request) {
-	id, err := opportunityDisplayID(chi.URLParam(r, "id"))
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		a.error(w, r, 400, "invalid_id", "opportunity ID must be a positive number")
+		a.error(w, r, 400, "invalid_id", "opportunity ID must be a UUID")
 		return
 	}
 	deleted, err := a.opportunities.Delete(r.Context(), id)
@@ -241,8 +232,24 @@ func (a *API) error(w http.ResponseWriter, r *http.Request, status int, code, ms
 	httperr.Write(w, status, code, msg, r.Header.Get("X-Request-ID"))
 }
 func (a *API) serverError(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, context.Canceled) {
+		a.log.Debug("request canceled by client", "request_id", r.Header.Get("X-Request-ID"))
+		return
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		a.log.Warn("request timed out", "request_id", r.Header.Get("X-Request-ID"))
+		a.error(w, r, http.StatusGatewayTimeout, "request_timeout", "request timed out")
+		return
+	}
 	a.log.Error("request failed", "error", err, "request_id", r.Header.Get("X-Request-ID"))
 	a.error(w, r, 500, "internal_error", "an unexpected error occurred")
+}
+func (a *API) requestTimeout(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+		defer cancel()
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 func (a *API) requestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
