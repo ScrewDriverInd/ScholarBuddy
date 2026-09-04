@@ -6,12 +6,17 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      // Forward API calls to your backend during development
-      // Change the target to wherever your backend runs
       "/api": {
-        target: "http://localhost:3000",
+        target: "http://localhost:8080",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
+      },
+      "/oauth2": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+      },
+      "/logout": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
       },
     },
   },
