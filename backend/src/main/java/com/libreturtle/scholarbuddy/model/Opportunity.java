@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.HashSet;
@@ -31,6 +33,7 @@ public class Opportunity {
     @CollectionTable(name = "opportunity_types", joinColumns = @JoinColumn(name = "opportunity_id"))
     @Column(name = "type")
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     private Set<OpportunityType> types = new HashSet<>();
 
     @Column(nullable = false, columnDefinition = "TEXT")
@@ -53,6 +56,7 @@ public class Opportunity {
     private User createdBy;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "approval_status", nullable = false)
     private ApprovalStatus approvalStatus = ApprovalStatus.PENDING;
 

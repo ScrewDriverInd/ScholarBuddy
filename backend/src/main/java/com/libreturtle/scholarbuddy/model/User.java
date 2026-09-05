@@ -4,14 +4,15 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
-import javax.annotation.processing.Generated;
 
 @Entity
 @Table(name = "users")
@@ -36,6 +37,7 @@ public class User {
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "role")
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     private Set<UserRole> roles = new HashSet<>();
 
     @CreationTimestamp
