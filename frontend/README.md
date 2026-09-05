@@ -37,6 +37,8 @@ src/
 
 ## Setup
 
+The frontend requires Node.js 20.19 or newer (Node.js 26 is recommended).
+
 1. **Install dependencies**
    ```bash
    npm install
