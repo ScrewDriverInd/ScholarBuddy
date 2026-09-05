@@ -3,7 +3,9 @@ spring:
     name: scholarbuddy
 
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/scholarbuddy}
+    url: ${DB_URL:jdbc:postgresql://db:5432/postgres}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -39,11 +41,13 @@ spring:
           google:
             issuer-uri: https://accounts.google.com
 
+  web:
+    error:
+      include-message: always
+      include-stacktrace: never
+
 server:
   port: ${HTTP_ADDR:8080}
-  error:
-    include-message: always
-    include-stacktrace: never
 
 management:
   endpoints:
