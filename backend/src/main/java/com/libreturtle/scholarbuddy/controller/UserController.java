@@ -26,6 +26,7 @@ public class UserController {
                 user.getEmail(),
                 user.getFullName(),
                 user.getUsername(),
+                user.getProvider(),
                 user.getRoles(),
                 user.getCreatedAt(),
                 user.getUpdatedAt()

@@ -11,6 +11,7 @@ public record UserResponse(
         String email,
         String fullName,
         String username,
+        String provider,
         Set<UserRole> roles,
         Instant createdAt,
         Instant updatedAt

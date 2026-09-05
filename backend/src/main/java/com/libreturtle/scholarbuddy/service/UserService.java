@@ -6,6 +6,7 @@ import com.libreturtle.scholarbuddy.model.User;
 import com.libreturtle.scholarbuddy.model.UserRole;
 import com.libreturtle.scholarbuddy.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,24 +14,31 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserService {
 
     private final UserRepository userRepository;
 
     @Transactional
-    public User createOrUpdateUser(UUID id, String email, String fullName) {
-        return userRepository.findById(id)
+    public User createOrUpdateUser(String email, String fullName, String provider) {
+        log.debug("createOrUpdateUser called - email: {}, fullName: {}, provider: {}", email, fullName, provider);
+
+        return userRepository.findByEmail(email)
                 .map(user -> {
-                    user.setEmail(email);
+                    log.info("User found, updating - id: {}, email: {}", user.getId(), user.getEmail());
                     user.setFullName(fullName);
+                    user.setProvider(provider);
                     return userRepository.save(user);
                 })
                 .orElseGet(() -> {
+                    log.info("User not found, creating new user - email: {}", email);
                     User user = new User();
-                    user.setId(id);
                     user.setEmail(email);
                     user.setFullName(fullName);
-                    return userRepository.save(user);
+                    user.setProvider(provider);
+                    User saved = userRepository.save(user);
+                    log.info("User created successfully - id: {}, email: {}", saved.getId(), saved.getEmail());
+                    return saved;
                 });
     }
 
@@ -51,6 +59,7 @@ public class UserService {
                 user.getEmail(),
                 user.getFullName(),
                 user.getUsername(),
+                user.getProvider(),
                 user.getRoles(),
                 user.getCreatedAt(),
                 user.getUpdatedAt()

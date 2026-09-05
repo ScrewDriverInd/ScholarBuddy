@@ -11,9 +11,18 @@ public class SecurityUtils {
 
     public static User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !(authentication.getPrincipal() instanceof CustomOAuth2User principal)) {
+        if (authentication == null) {
             throw ApiException.unauthorized("valid authentication is required");
         }
-        return principal.getUser();
+
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof CustomOidcUser customOidcUser) {
+            return customOidcUser.getUser();
+        }
+        if (principal instanceof CustomOAuth2User customOAuth2User) {
+            return customOAuth2User.getUser();
+        }
+
+        throw ApiException.unauthorized("valid authentication is required");
     }
 }

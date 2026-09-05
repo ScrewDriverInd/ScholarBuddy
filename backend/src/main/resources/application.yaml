@@ -66,10 +66,14 @@ springdoc:
     path: /swagger-ui.html
     enabled: true
 
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
 
 logging:
   level:
-    com.libreturtle.scholarbuddy: INFO
-    org.springframework.security: INFO
+    com.libreturtle.scholarbuddy: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG

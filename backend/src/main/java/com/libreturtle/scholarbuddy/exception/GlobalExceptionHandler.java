@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -47,6 +48,14 @@ public class GlobalExceptionHandler {
         }
         ErrorResponse error = new ErrorResponse("invalid_parameter", message, requestId);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", error));
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, ErrorResponse>> handleNoResourceFound(
+            NoResourceFoundException ex, HttpServletRequest request) {
+        String requestId = request.getHeader("X-Request-ID");
+        ErrorResponse error = new ErrorResponse("not_found", "Resource not found", requestId);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", error));
     }
 
     @ExceptionHandler(Exception.class)
