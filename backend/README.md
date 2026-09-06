@@ -53,7 +53,9 @@ Production-grade Spring Boot 4 backend with Google OAuth2 authentication.
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL JDBC URL | `jdbc:postgresql://ep-xxx.neon.tech/scholarbuddy` |
+| `DB_URL` | PostgreSQL JDBC URL | `jdbc:postgresql://ep-xxx.neon.tech/scholarbuddy` |
+| `DB_USERNAME` | PostgreSQL username | `postgres` |
+| `DB_PASSWORD` | PostgreSQL password | `postgres` |
 | `GOOGLE_CLIENT_ID` | Google OAuth2 client ID | `xxx.apps.googleusercontent.com` |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth2 client secret | `GOCSPX-xxx` |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated origins | `http://localhost:5173` |
