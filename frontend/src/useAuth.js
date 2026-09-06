@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { apiFetch, unwrapData } from "./api";
+import { apiFetch, apiURL, unwrapData } from "./api";
 
 export const useAuth = () => {
   const [user, setUser] = useState(null);
@@ -21,12 +21,12 @@ export const useAuth = () => {
   };
 
   const login = () => {
-    window.location.href = "/oauth2/authorization/google";
+    window.location.href = apiURL("/oauth2/authorization/google");
   };
 
   const logout = async () => {
     try {
-      await fetch("/logout", { method: "POST", credentials: "include" });
+      await apiFetch("/logout", { method: "POST" });
       setUser(null);
     } catch (error) {
       console.error("Logout failed:", error);

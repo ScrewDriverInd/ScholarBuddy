@@ -27,30 +27,30 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/actuator/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/listings", "/api/v1/listings/*").permitAll()
-                .requestMatchers("/api/v1/user/me").authenticated()
+                        .requestMatchers("/api/v1/user/me").authenticated()
                         .requestMatchers("/api/v1/listings/**").authenticated()
-                .requestMatchers("/api/v1/abbujaan/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/abbujaan/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
-            .exceptionHandling(exceptions -> exceptions
-                .defaultAuthenticationEntryPointFor(
-                    new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                .exceptionHandling(exceptions -> exceptions
+                        .defaultAuthenticationEntryPointFor(
+                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
                                 request -> request.getRequestURI().startsWith("/api/")))
-            .oauth2Login(oauth2 -> oauth2
-                .userInfoEndpoint(userInfo -> userInfo
-                    .userService(customOAuth2UserService)
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService)
                                 .oidcUserService(customOidcUserService))
                         .defaultSuccessUrl(frontendUrl, true))
-            .logout(logout -> logout
-                .logoutUrl("/logout")
-                .logoutSuccessUrl(frontendUrl)
-                .invalidateHttpSession(true)
-                .deleteCookies("JSESSIONID")
-            );
+                .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .logoutSuccessHandler((request, response, authentication) -> response
+                                .setStatus(HttpStatus.NO_CONTENT.value()))
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID"));
 
         return http.build();
     }
