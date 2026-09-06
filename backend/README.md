@@ -1,72 +1,273 @@
-# ScholarBuddy API
+# ScholarBuddy Backend - Spring Boot 4
 
-Go backend for opportunities (scholarships, hackathons, internships, research, and extras).
+Production-grade Spring Boot 4 backend with Google OAuth2 authentication.
 
-## Quick start
+## Features
 
-1. Copy `.env.example` to `.env` and fill in the Supabase Postgres connection string, project credentials, and admin secrets.
-2. Create the PostgreSQL database and run `make migrate-up`.
-3. Run `make test`, then `make run`.
+- **Google OAuth2 only** - Single sign-in for all users
+- **Role-based access** - ROLE_USER (all), ROLE_ADMIN (privileged)
+- **Listing workflow** - Create → Pending → Admin Approval → Public
+- **Click tracking** - Records user engagement
+- **Production-ready** - Validation, error handling, migrations, health checks
 
-## Reset an existing development database
+## Tech Stack
 
-The project now has one clean initial migration. To discard the previous ScholarBuddy schema, opportunity data, custom users, and migration history, export `DATABASE_URL` and run:
+- Java 25
+- Spring Boot 4.1.1
+- Spring Security with OAuth2 Client
+- Spring Data JPA
+- PostgreSQL
+- Flyway
+- Lombok
+- SpringDoc OpenAPI
 
-```bash
-make db-reset
-make migrate-up
-```
+## Quick Start
 
-`db-reset` is destructive. It does not remove Supabase Auth users or Google OAuth settings.
+1. **Create PostgreSQL database** (e.g., Neon)
 
-The built-in Go migrator applies every pending `*.up.sql` migration with `make migrate-up`; `make migrate-down` rolls back only the most recently applied migration.
+2. **Set up Google OAuth2**
+   - [Google Cloud Console](https://console.cloud.google.com/)
+   - Create OAuth 2.0 credentials
+   - Authorized redirect URI: `http://localhost:8080/login/oauth2/code/google`
 
-Swagger UI is available in a normal development build at `http://localhost:8080/docs`. Build production with `go build -tags production ./cmd/api`; that binary contains neither `/docs` nor `/docs/openapi.yaml`.
+3. **Configure environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your credentials
+   ```
 
-## API
+4. **Run**
+   ```bash
+   ./gradlew bootRun
+   ```
 
-All responses are JSON envelopes: `{ "data": ... }` or `{ "error": { "code", "message", "request_id" } }`.
+5. **Create first admin**
+   - Sign in with Google at http://localhost:8080/oauth2/authorization/google
+   - Run in PostgreSQL:
+     ```sql
+     SELECT id FROM users WHERE email = 'your-email@example.com';
+     INSERT INTO user_roles (user_id, role) VALUES ('your-user-id', 'ROLE_ADMIN');
+     ```
 
-| Method | Path | Authentication | Purpose |
-|---|---|---|---|
-| GET | `/healthz` | No | Service health |
-| GET | `/` | No | `{ "message": "Welcome to ScholarBuddy" }` |
-| GET | `/api/v1/opportunities?type=scholarship` | No | Approved opportunities, ranked by click count; `type` may be `all`, `scholarship`, `hackathon`, `internship`, `research`, or `extras` |
-| GET | `/api/v1/opportunities/{id}` | No | Full opportunity details |
-| GET | `/api/v1/me` | Supabase bearer token | Provision/read current user |
-| POST | `/api/v1/opportunities` | Supabase bearer token | Create an opportunity |
-| PATCH | `/api/v1/opportunities/{id}` | Supabase bearer token | Update own opportunity only |
-| GET | `/api/v1/abbujaan` | Admin session token | Pending opportunities for the admin dashboard |
-| PATCH | `/api/v1/abbujaan/opportunities/{id}/approve` | Admin session token | Approve a pending opportunity |
-| DELETE | `/api/v1/abbujaan/opportunities/{id}` | Admin session token | Delete an opportunity |
-| POST | `/api/v1/abbujaan/login` | No | Admin login using `username` and `password` |
+## Environment Variables
 
-For Google login, the frontend should call Supabase OAuth and send the returned access token as `Authorization: Bearer <token>` to protected routes. New accounts are always provisioned as `ROLE_USER`. Created and updated opportunities remain pending until approved by an administrator; only approved opportunities appear publicly.
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DB_URL` | PostgreSQL JDBC URL | `jdbc:postgresql://ep-xxx.neon.tech/scholarbuddy` |
+| `DB_USERNAME` | PostgreSQL username | `postgres` |
+| `DB_PASSWORD` | PostgreSQL password | `postgres` |
+| `GOOGLE_CLIENT_ID` | Google OAuth2 client ID | `xxx.apps.googleusercontent.com` |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth2 client secret | `GOCSPX-xxx` |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated origins | `http://localhost:5173` |
+| `HTTP_ADDR` | Server port (optional) | `8080` |
 
-Create/update request fields: `title`, `description`, `types`, `eligibility`, `steps`, `benefits`, `link`, `referral`. `types` is a required, non-empty array using any combination of `scholarship`, `hackathon`, `internship`, `research`, and `extras`.
+## API Endpoints
 
-Opportunity responses expose their UUID `id`. The frontend renders the row number it wants to display; UUIDs are used only for API routes and data identity. Opening a public opportunity increments its `click_count`, and public lists are ranked by that count.
+### Public
+- `GET /` - Welcome message
+- `GET /actuator/health` - Health check
+- `GET /api/v1/listings` - List approved (with `?type`, `?page`, `?per_page`)
+- `GET /api/v1/listings/{id}` - Get listing (records click)
+
+### Authenticated
+- `GET /api/v1/user/me` - Current user info
+- `POST /api/v1/listings` - Create listing (pending)
+- `PATCH /api/v1/listings/{id}` - Update own listing (resets to pending)
+- `POST /logout` - Logout
+
+### Admin
+- `GET /api/v1/abbujaan/listings` - List pending listings
+- `PATCH /api/v1/abbujaan/listings/{id}/approve` - Approve listing
+- `DELETE /api/v1/abbujaan/listings/{id}` - Delete any listing
+- `POST /api/v1/abbujaan/users/{id}/admin` - Grant ROLE_ADMIN to user
 
 ## Authentication
 
-### User Authentication (Google OAuth via Supabase)
-Users log in with Google OAuth through Supabase. When a user logs in:
-- Supabase handles the OAuth flow and stores the user in their auth system
-- Our backend receives the Supabase JWT token
-- We automatically store the user in our `users` table with:
-  - `id`: Supabase user UUID
-  - `email`: Gmail address
-  - `full_name`: Name from Google account
-  - `username`: Auto-generated from email (part before @)
-  - `roles`: `['ROLE_USER']` by default
+**Google OAuth2 Flow:**
+1. Frontend redirects to `/oauth2/authorization/google`
+2. User authenticates with Google
+3. Backend exchanges code for user info
+4. User created/updated in database with ROLE_USER
+5. Session cookie set
+6. User redirected to frontend
 
-### Admin Authentication (Username & Password)
-Admins use a separate authentication system with username and password stored in the `admins` table:
-- Passwords are hashed using argon2id algorithm
-- Admin login returns a JWT token valid for 8 hours
-- Admin tokens include the `ROLE_ADMIN` role
+**Session-based** - Cookies, not tokens. Sessions are httpOnly and secure in production.
 
-To create an admin, hash the password with argon2id and insert into the `admins` table:
+## Database Schema
+
 ```sql
-INSERT INTO admins (username, password_hash) VALUES ('admin', '$argon2id$v=19$m=65536,t=3,p=4$...');
+-- Enums
+CREATE TYPE user_role AS ENUM ('ROLE_USER', 'ROLE_ADMIN');
+CREATE TYPE listing_type AS ENUM ('SCHOLARSHIP', 'HACKATHON', 'INTERNSHIP', 'RESEARCH', 'EXTRAS');
+CREATE TYPE approval_status AS ENUM ('PENDING', 'APPROVED');
+
+-- Users (from Google OAuth)
+CREATE TABLE users (
+    id UUID PRIMARY KEY,                    -- from Google 'sub'
+    email TEXT NOT NULL UNIQUE,
+    full_name TEXT NOT NULL DEFAULT '',
+    username TEXT NOT NULL GENERATED AS (split_part(email, '@', 1)) STORED,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- User roles (many-to-many)
+CREATE TABLE user_roles (
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role user_role NOT NULL,
+    PRIMARY KEY (user_id, role)
+);
+
+-- Listings
+CREATE TABLE listings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL CHECK (char_length(title) BETWEEN 1 AND 250),
+    description TEXT NOT NULL CHECK (char_length(description) BETWEEN 1 AND 10000),
+    eligibility TEXT NOT NULL DEFAULT '',
+    steps TEXT NOT NULL DEFAULT '',
+    benefits TEXT NOT NULL DEFAULT '',
+    link TEXT NOT NULL DEFAULT '',
+    referral TEXT NOT NULL DEFAULT '',
+    created_by UUID NOT NULL REFERENCES users(id),
+    approval_status approval_status NOT NULL DEFAULT 'PENDING',
+    click_count BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Listing types (many-to-many)
+CREATE TABLE listing_types (
+    listing_id UUID NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+    type listing_type NOT NULL,
+    PRIMARY KEY (listing_id, type)
+);
 ```
+
+## Project Structure
+
+```
+src/main/java/com/libreturtle/scholarbuddy/
+├── config/
+│   ├── CorsConfig.java           # CORS configuration
+│   ├── RequestIdFilter.java      # X-Request-ID tracking
+│   └── SecurityConfig.java       # Spring Security + OAuth2
+├── controller/
+│   ├── AdminController.java      # /api/v1/abbujaan/*
+│   ├── ListingController.java # /api/v1/listings/*
+│   ├── RootController.java       # /
+│   └── UserController.java       # /api/v1/user/*
+├── dto/
+│   ├── ApiResponseBody.java      # {"data": ...} wrapper (record)
+│   ├── ErrorResponse.java        # {"error": {...}} (record)
+│   ├── ListingRequest.java   # Create/update DTO (record)
+│   ├── ListingResponse.java  # Listing DTO (record)
+│   ├── PageRequest.java          # Pagination validation (record)
+│   ├── PageResponse.java         # Paginated response (record)
+│   └── UserResponse.java         # User DTO (record)
+├── exception/
+│   ├── ApiException.java         # Custom exceptions
+│   └── GlobalExceptionHandler.java # @ControllerAdvice
+├── model/
+│   ├── ApprovalStatus.java       # PENDING, APPROVED
+│   ├── Listing.java          # JPA entity
+│   ├── ListingType.java      # SCHOLARSHIP, HACKATHON, etc.
+│   ├── User.java                 # JPA entity
+│   └── UserRole.java             # ROLE_USER, ROLE_ADMIN
+├── repository/
+│   ├── ListingRepository.java
+│   └── UserRepository.java
+├── security/
+│   ├── CustomOAuth2User.java     # OAuth2User wrapper
+│   ├── CustomOAuth2UserService.java # Loads/creates users
+│   └── SecurityUtils.java        # Get current user
+├── service/
+│   ├── ListingService.java   # Business logic
+│   └── UserService.java          # User management
+└── validation/
+    ├── ValidUrl.java             # Custom @ValidUrl annotation
+    └── UrlValidator.java         # URL validation logic
+
+src/main/resources/
+├── application.yaml              # Configuration
+└── db/migration/
+    └── V1__initial_schema.sql    # Flyway migration
+```
+
+## Response Format
+
+**Success:**
+```json
+{
+  "data": { ... }
+}
+```
+
+**Error:**
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "message": "title is required",
+    "requestId": "uuid"
+  }
+}
+```
+
+## Development
+
+```bash
+# Build
+./gradlew build
+
+# Run tests (requires database)
+./gradlew test
+
+# Clean build
+./gradlew clean build
+
+# Run with profile
+./gradlew bootRun --args='--spring.profiles.active=dev'
+```
+
+## API Documentation
+
+Once running:
+- Swagger UI: http://localhost:8080/swagger-ui.html
+- OpenAPI spec: http://localhost:8080/v3/api-docs
+
+## Production Deployment
+
+1. Set environment variables
+2. Use HTTPS (Spring Security will set secure cookies)
+3. Configure CORS for your frontend domain
+4. Set up database backups
+5. Monitor `/actuator/health`
+6. Review security headers and CSP
+
+## Standards Applied
+
+✅ **Java conventions** - UPPERCASE enums, records for DTOs  
+✅ **Validation** - Bean Validation on all request DTOs  
+✅ **Error handling** - Consistent format, no internal details leaked  
+✅ **Security** - OAuth2, CSRF disabled (session + CORS), role-based access  
+✅ **Database** - Flyway migrations, constraints, indexes  
+✅ **API design** - RESTful, proper status codes, pagination  
+✅ **Code quality** - Lombok, layered architecture, clear separation of concerns  
+
+## Changes from Go Backend
+
+**Removed:**
+- Supabase JWT validation
+- `/api/v1/abbujaan/login` endpoint (admin login)
+- Separate `admins` table
+
+**Added:**
+- Google OAuth2 via Spring Security
+- Session-based authentication
+- `/api/v1/user/me` endpoint
+- `POST /api/v1/abbujaan/users/{id}/admin` endpoint
+
+**Updated:**
+- Enums to UPPERCASE (SCHOLARSHIP not scholarship)
+- Health endpoint: `/actuator/health` (Spring standard)
+- Logout: `POST /logout` (Spring standard)

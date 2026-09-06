@@ -1,29 +1,166 @@
-# React + Vite
+# ScholarBuddy Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React frontend for ScholarBuddy with Google OAuth2 authentication via Spring Boot backend.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Browse approved listings (public)
+- Filter by type (scholarship, hackathon, internship, research, extras)
+- Google OAuth2 login
+- Admin dashboard for approving/deleting listings
+- Modular component architecture
+- HackerNews-inspired design
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React 19
+- Vite 8
+- CSS (no frameworks)
+- Session-based authentication (cookies)
 
-## Expanding the Oxlint configuration
+## Project Structure
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
-# ScholarBuddy frontend
-
-Set these values in `.env.local` before starting Vite:
-
-```env
-VITE_API_BASE=http://localhost:8080
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
+src/
+├── components/
+│   ├── Header.jsx          # Navigation header with login/logout
+│   ├── Home.jsx            # Main listing list with filters
+│   ├── Detail.jsx          # Listing detail view
+│   └── AdminDashboard.jsx  # Admin panel for pending listings
+├── api.js                  # API client with fetch wrapper
+├── useAuth.js              # Authentication hook
+├── App.jsx                 # Main app component
+├── App.css                 # Application styles
+├── index.css               # Global styles
+└── main.jsx                # Entry point
 ```
 
-For Google login, enable the Google provider in Supabase Authentication → Providers, enter the Google OAuth client ID/secret, and add the local/production frontend URLs in Supabase Authentication → URL Configuration.
+## Setup
 
-The admin login is intentionally not linked from the public interface. Visit `/abbujaan` directly.
+The frontend requires Node.js 20.19 or newer (Node.js 26 is recommended).
+
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+2. **Configure environment** (optional)
+   ```bash
+   cp .env.example .env
+   # VITE_API_BASE is empty by default (uses proxy)
+   ```
+
+3. **Run development server**
+   ```bash
+   npm run dev
+   ```
+
+4. **Build for production**
+   ```bash
+   npm run build
+   ```
+
+## Development
+
+The dev server runs on `http://localhost:5173` and proxies API requests to the backend at `http://localhost:8080`.
+
+### Proxy Configuration
+
+Vite is configured to proxy these paths to the backend:
+- `/api/*` - API endpoints
+- `/oauth2/*` - OAuth2 login flow
+- `/logout` - Logout endpoint
+
+### Authentication Flow
+
+1. User clicks "login with google"
+2. Frontend redirects to `/oauth2/authorization/google`
+3. Spring backend handles OAuth2 flow with Google
+4. User is redirected back with session cookie
+5. Frontend calls `/api/v1/user/me` to get user info
+6. Session cookie is included automatically in all requests
+
+### API Endpoints Used
+
+**Public:**
+- `GET /api/v1/listings` - List approved listings
+- `GET /api/v1/listings/{id}` - Get listing detail
+
+**Authenticated:**
+- `GET /api/v1/user/me` - Get current user
+- `POST /logout` - Logout
+
+**Admin:**
+- `GET /api/v1/abbujaan/listings` - List pending listings
+- `PATCH /api/v1/abbujaan/listings/{id}/approve` - Approve
+- `DELETE /api/v1/abbujaan/listings/{id}` - Delete
+
+## Components
+
+### Header
+Navigation bar with app name, tagline, and login/logout button.
+
+### Home
+Main view showing:
+- Filter chips for listing types
+- Paginated table of listings
+- Click tracking on listing links
+
+### Detail
+Shows full listing information:
+- Title, description, types
+- Eligibility, steps, benefits
+- External link to listing
+
+### AdminDashboard
+Admin-only view for:
+- Listing pending listings
+- Approving listings
+- Deleting listings
+
+## Hooks
+
+### useAuth
+Custom hook that provides:
+- `user` - Current user object (null if not logged in)
+- `loading` - Auth check loading state
+- `login()` - Redirect to Google OAuth
+- `logout()` - Logout and clear session
+- `isAdmin` - Boolean if user has ROLE_ADMIN
+- `checkAuth()` - Manually refresh auth state
+
+## API Client
+
+`api.js` provides:
+- `apiFetch(path, options)` - Fetch wrapper with credentials
+- `unwrapData(payload)` - Extract data from `{data: ...}` envelope
+- `apiURL(path)` - Build full API URL
+
+All requests include `credentials: "include"` for session cookies.
+
+## Changes from Original
+
+**Removed:**
+- Supabase client (`@supabase/supabase-js`)
+- Admin username/password login
+- Bearer token authentication
+- `/abbujaan/login` endpoint
+
+**Added:**
+- Google OAuth2 via Spring backend
+- Session-based authentication
+- `/api/v1/user/me` endpoint for user info
+- Modular component structure
+- `useAuth` hook for auth state
+
+**Updated:**
+- Enum values to uppercase (SCHOLARSHIP not scholarship)
+- Response format handling (`data.clickCount` not `data.click_count`)
+- Admin access check (via roles, not separate token)
+
+## Notes
+
+- Admin access requires `ROLE_ADMIN` in user roles
+- First admin must be created via database (see backend README)
+- Session cookies are httpOnly and secure in production
+- OAuth redirect URI: `http://localhost:8080/login/oauth2/code/google`
