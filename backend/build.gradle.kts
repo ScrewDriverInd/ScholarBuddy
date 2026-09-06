@@ -2,7 +2,6 @@ plugins {
     java
     id("org.springframework.boot") version "4.1.1"
     id("io.spring.dependency-management") version "1.1.7"
-    id("org.graalvm.buildtools.native") version "1.1.8"
 }
 
 group = "com.libreturtle"
@@ -45,12 +44,6 @@ dependencies {
     testAnnotationProcessor("org.projectlombok:lombok")
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-}
-
-graalvmNative {
-    metadataRepository {
-        enabled.set(true)
-    }
 }
 
 tasks.withType<Test> {
