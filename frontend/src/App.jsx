@@ -10,16 +10,16 @@ import "./App.css";
 function App() {
   const { user, loading: authLoading, login, logout, isAdmin } = useAuth();
   const [view, setView] = useState("home");
-  const [selectedOpportunity, setSelectedOpportunity] = useState(null);
+  const [selectedListing, setSelectedListing] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState(null);
 
-  const handleOpenOpportunity = async (id) => {
+  const handleOpenListing = async (id) => {
     setDetailLoading(true);
     setDetailError(null);
     try {
-      const response = await apiFetch(`/api/v1/opportunities/${id}`);
-      setSelectedOpportunity(unwrapData(response));
+      const response = await apiFetch(`/api/v1/listings/${id}`);
+      setSelectedListing(unwrapData(response));
       setView("detail");
     } catch (err) {
       setDetailError(err.message);
@@ -30,7 +30,7 @@ function App() {
 
   const handleBackToHome = () => {
     setView("home");
-    setSelectedOpportunity(null);
+    setSelectedListing(null);
     setDetailError(null);
   };
 
@@ -52,11 +52,11 @@ function App() {
     <>
       <Header user={user} onLogin={login} onLogout={logout} onHome={handleBackToHome} />
 
-      {view === "home" && <Home onOpenOpportunity={handleOpenOpportunity} />}
+      {view === "home" && <Home onOpenListing={handleOpenListing} />}
 
       {view === "detail" && (
         <Detail
-          item={selectedOpportunity}
+          item={selectedListing}
           loading={detailLoading}
           error={detailError}
           onBack={handleBackToHome}

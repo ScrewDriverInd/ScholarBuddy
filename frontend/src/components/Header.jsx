@@ -4,7 +4,7 @@ export default function Header({ user, onLogin, onLogout, onHome }) {
       <button className="header__logo" onClick={onHome}>
         ScholarBuddy
       </button>
-      <span className="header__tagline">opportunities for students</span>
+      <span className="header__tagline">listings for students</span>
       <span className="header__spacer" />
       {user ? (
         <button className="header__btn" onClick={onLogout}>

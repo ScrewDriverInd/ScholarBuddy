@@ -10,7 +10,7 @@ const TYPES = [
   { label: "extras", value: "EXTRAS" },
 ];
 
-export default function Home({ onOpenOpportunity }) {
+export default function Home({ onOpenListing }) {
   const [activeType, setActiveType] = useState(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +23,7 @@ export default function Home({ onOpenOpportunity }) {
     setLoading(true);
     setError(null);
 
-    apiFetch(`/api/v1/opportunities${query}`, { signal: controller.signal })
+    apiFetch(`/api/v1/listings${query}`, { signal: controller.signal })
       .then((payload) => setItems(unwrapData(payload)?.items || []))
       .catch((err) => {
         if (err.name !== "AbortError") {
@@ -78,7 +78,7 @@ export default function Home({ onOpenOpportunity }) {
                   <td>
                     <button
                       className="title-button"
-                      onClick={() => onOpenOpportunity(item.id)}
+                      onClick={() => onOpenListing(item.id)}
                     >
                       {item.title}
                     </button>

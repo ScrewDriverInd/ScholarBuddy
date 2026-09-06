@@ -23,7 +23,7 @@ export default function Detail({ item, loading, error, onBack }) {
         target="_blank"
         rel="noreferrer"
       >
-        visit opportunity →
+        visit listing →
       </a>
     </main>
   );

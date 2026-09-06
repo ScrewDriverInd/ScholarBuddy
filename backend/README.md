@@ -6,7 +6,7 @@ Production-grade Spring Boot 4 backend with Google OAuth2 authentication.
 
 - **Google OAuth2 only** - Single sign-in for all users
 - **Role-based access** - ROLE_USER (all), ROLE_ADMIN (privileged)
-- **Opportunity workflow** - Create → Pending → Admin Approval → Public
+- **Listing workflow** - Create → Pending → Admin Approval → Public
 - **Click tracking** - Records user engagement
 - **Production-ready** - Validation, error handling, migrations, health checks
 
@@ -64,19 +64,19 @@ Production-grade Spring Boot 4 backend with Google OAuth2 authentication.
 ### Public
 - `GET /` - Welcome message
 - `GET /actuator/health` - Health check
-- `GET /api/v1/opportunities` - List approved (with `?type`, `?page`, `?per_page`)
-- `GET /api/v1/opportunities/{id}` - Get opportunity (records click)
+- `GET /api/v1/listings` - List approved (with `?type`, `?page`, `?per_page`)
+- `GET /api/v1/listings/{id}` - Get listing (records click)
 
 ### Authenticated
 - `GET /api/v1/user/me` - Current user info
-- `POST /api/v1/opportunities` - Create opportunity (pending)
-- `PATCH /api/v1/opportunities/{id}` - Update own opportunity (resets to pending)
+- `POST /api/v1/listings` - Create listing (pending)
+- `PATCH /api/v1/listings/{id}` - Update own listing (resets to pending)
 - `POST /logout` - Logout
 
 ### Admin
-- `GET /api/v1/abbujaan/opportunities` - List pending opportunities
-- `PATCH /api/v1/abbujaan/opportunities/{id}/approve` - Approve opportunity
-- `DELETE /api/v1/abbujaan/opportunities/{id}` - Delete any opportunity
+- `GET /api/v1/abbujaan/listings` - List pending listings
+- `PATCH /api/v1/abbujaan/listings/{id}/approve` - Approve listing
+- `DELETE /api/v1/abbujaan/listings/{id}` - Delete any listing
 - `POST /api/v1/abbujaan/users/{id}/admin` - Grant ROLE_ADMIN to user
 
 ## Authentication
@@ -96,7 +96,7 @@ Production-grade Spring Boot 4 backend with Google OAuth2 authentication.
 ```sql
 -- Enums
 CREATE TYPE user_role AS ENUM ('ROLE_USER', 'ROLE_ADMIN');
-CREATE TYPE opportunity_type AS ENUM ('SCHOLARSHIP', 'HACKATHON', 'INTERNSHIP', 'RESEARCH', 'EXTRAS');
+CREATE TYPE listing_type AS ENUM ('SCHOLARSHIP', 'HACKATHON', 'INTERNSHIP', 'RESEARCH', 'EXTRAS');
 CREATE TYPE approval_status AS ENUM ('PENDING', 'APPROVED');
 
 -- Users (from Google OAuth)
@@ -116,8 +116,8 @@ CREATE TABLE user_roles (
     PRIMARY KEY (user_id, role)
 );
 
--- Opportunities
-CREATE TABLE opportunities (
+-- Listings
+CREATE TABLE listings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL CHECK (char_length(title) BETWEEN 1 AND 250),
     description TEXT NOT NULL CHECK (char_length(description) BETWEEN 1 AND 10000),
@@ -133,11 +133,11 @@ CREATE TABLE opportunities (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Opportunity types (many-to-many)
-CREATE TABLE opportunity_types (
-    opportunity_id UUID NOT NULL REFERENCES opportunities(id) ON DELETE CASCADE,
-    type opportunity_type NOT NULL,
-    PRIMARY KEY (opportunity_id, type)
+-- Listing types (many-to-many)
+CREATE TABLE listing_types (
+    listing_id UUID NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+    type listing_type NOT NULL,
+    PRIMARY KEY (listing_id, type)
 );
 ```
 
@@ -151,14 +151,14 @@ src/main/java/com/libreturtle/scholarbuddy/
 │   └── SecurityConfig.java       # Spring Security + OAuth2
 ├── controller/
 │   ├── AdminController.java      # /api/v1/abbujaan/*
-│   ├── OpportunityController.java # /api/v1/opportunities/*
+│   ├── ListingController.java # /api/v1/listings/*
 │   ├── RootController.java       # /
 │   └── UserController.java       # /api/v1/user/*
 ├── dto/
 │   ├── ApiResponseBody.java      # {"data": ...} wrapper (record)
 │   ├── ErrorResponse.java        # {"error": {...}} (record)
-│   ├── OpportunityRequest.java   # Create/update DTO (record)
-│   ├── OpportunityResponse.java  # Opportunity DTO (record)
+│   ├── ListingRequest.java   # Create/update DTO (record)
+│   ├── ListingResponse.java  # Listing DTO (record)
 │   ├── PageRequest.java          # Pagination validation (record)
 │   ├── PageResponse.java         # Paginated response (record)
 │   └── UserResponse.java         # User DTO (record)
@@ -167,19 +167,19 @@ src/main/java/com/libreturtle/scholarbuddy/
 │   └── GlobalExceptionHandler.java # @ControllerAdvice
 ├── model/
 │   ├── ApprovalStatus.java       # PENDING, APPROVED
-│   ├── Opportunity.java          # JPA entity
-│   ├── OpportunityType.java      # SCHOLARSHIP, HACKATHON, etc.
+│   ├── Listing.java          # JPA entity
+│   ├── ListingType.java      # SCHOLARSHIP, HACKATHON, etc.
 │   ├── User.java                 # JPA entity
 │   └── UserRole.java             # ROLE_USER, ROLE_ADMIN
 ├── repository/
-│   ├── OpportunityRepository.java
+│   ├── ListingRepository.java
 │   └── UserRepository.java
 ├── security/
 │   ├── CustomOAuth2User.java     # OAuth2User wrapper
 │   ├── CustomOAuth2UserService.java # Loads/creates users
 │   └── SecurityUtils.java        # Get current user
 ├── service/
-│   ├── OpportunityService.java   # Business logic
+│   ├── ListingService.java   # Business logic
 │   └── UserService.java          # User management
 └── validation/
     ├── ValidUrl.java             # Custom @ValidUrl annotation

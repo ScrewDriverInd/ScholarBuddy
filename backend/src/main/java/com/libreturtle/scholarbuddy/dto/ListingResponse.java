@@ -1,17 +1,17 @@
 package com.libreturtle.scholarbuddy.dto;
 
 import com.libreturtle.scholarbuddy.model.ApprovalStatus;
-import com.libreturtle.scholarbuddy.model.OpportunityType;
+import com.libreturtle.scholarbuddy.model.ListingType;
 
 import java.time.Instant;
 import java.util.Set;
 import java.util.UUID;
 
-public record OpportunityResponse(
+public record ListingResponse(
         UUID id,
         String title,
         String description,
-        Set<OpportunityType> types,
+        Set<ListingType> types,
         String eligibility,
         String steps,
         String benefits,

@@ -14,10 +14,10 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "opportunities")
+@Table(name = "listings")
 @Getter
 @Setter
-public class Opportunity {
+public class Listing {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -30,11 +30,11 @@ public class Opportunity {
     private String description;
 
     @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "opportunity_types", joinColumns = @JoinColumn(name = "opportunity_id"))
+    @CollectionTable(name = "listing_types", joinColumns = @JoinColumn(name = "listing_id"))
     @Column(name = "type")
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    private Set<OpportunityType> types = new HashSet<>();
+    private Set<ListingType> types = new HashSet<>();
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String eligibility = "";

@@ -1,6 +1,6 @@
 package com.libreturtle.scholarbuddy.model;
 
-public enum OpportunityType {
+public enum ListingType {
     SCHOLARSHIP,
     HACKATHON,
     INTERNSHIP,

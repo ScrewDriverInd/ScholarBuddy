@@ -29,26 +29,22 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/actuator/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/opportunities", "/api/v1/opportunities/*").permitAll()
+                        .requestMatchers("/", "/actuator/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                        .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/listings", "/api/v1/listings/*").permitAll()
                 .requestMatchers("/api/v1/user/me").authenticated()
-                .requestMatchers("/api/v1/opportunities/**").authenticated()
+                        .requestMatchers("/api/v1/listings/**").authenticated()
                 .requestMatchers("/api/v1/abbujaan/**").hasRole("ADMIN")
-                .anyRequest().authenticated()
-            )
+                        .anyRequest().authenticated())
             .exceptionHandling(exceptions -> exceptions
                 .defaultAuthenticationEntryPointFor(
                     new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-                    request -> request.getRequestURI().startsWith("/api/")
-                )
-            )
+                                request -> request.getRequestURI().startsWith("/api/")))
             .oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo -> userInfo
                     .userService(customOAuth2UserService)
-                    .oidcUserService(customOidcUserService)
-                )
-                .defaultSuccessUrl(frontendUrl, true)
-            )
+                                .oidcUserService(customOidcUserService))
+                        .defaultSuccessUrl(frontendUrl, true))
             .logout(logout -> logout
                 .logoutUrl("/logout")
                 .logoutSuccessUrl(frontendUrl)

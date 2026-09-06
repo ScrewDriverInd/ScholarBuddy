@@ -1,11 +1,11 @@
 package com.libreturtle.scholarbuddy.controller;
 
 import com.libreturtle.scholarbuddy.dto.ApiResponseBody;
-import com.libreturtle.scholarbuddy.dto.OpportunityResponse;
+import com.libreturtle.scholarbuddy.dto.ListingResponse;
 import com.libreturtle.scholarbuddy.dto.PageRequest;
 import com.libreturtle.scholarbuddy.dto.PageResponse;
 import com.libreturtle.scholarbuddy.dto.UserResponse;
-import com.libreturtle.scholarbuddy.service.OpportunityService;
+import com.libreturtle.scholarbuddy.service.ListingService;
 import com.libreturtle.scholarbuddy.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,26 +19,26 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AdminController {
 
-    private final OpportunityService opportunityService;
+    private final ListingService listingService;
     private final UserService userService;
 
-    @GetMapping("/opportunities")
-    public ResponseEntity<ApiResponseBody<PageResponse<OpportunityResponse>>> listPending(
+    @GetMapping("/listings")
+    public ResponseEntity<ApiResponseBody<PageResponse<ListingResponse>>> listPending(
             @RequestParam(name = "page", defaultValue = "1") int page,
             @RequestParam(name = "per_page", defaultValue = "20") int perPage) {
         PageRequest pageRequest = new PageRequest(page, perPage);
-        return ResponseEntity.ok(ApiResponseBody.of(opportunityService.listPending(pageRequest.page(), pageRequest.perPage())));
+        return ResponseEntity.ok(ApiResponseBody.of(listingService.listPending(pageRequest.page(), pageRequest.perPage())));
     }
 
-    @PatchMapping("/opportunities/{id}/approve")
-    public ResponseEntity<ApiResponseBody<OpportunityResponse>> approve(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponseBody.of(opportunityService.approve(id)));
+    @PatchMapping("/listings/{id}/approve")
+    public ResponseEntity<ApiResponseBody<ListingResponse>> approve(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponseBody.of(listingService.approve(id)));
     }
 
-    @DeleteMapping("/opportunities/{id}")
+    @DeleteMapping("/listings/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID id) {
-        opportunityService.delete(id);
+        listingService.delete(id);
     }
 
     @PostMapping("/users/{id}/admin")

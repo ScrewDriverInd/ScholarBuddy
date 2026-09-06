@@ -1,27 +1,28 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TYPE user_role AS ENUM ('ROLE_USER', 'ROLE_ADMIN');
-CREATE TYPE opportunity_type AS ENUM ('SCHOLARSHIP', 'HACKATHON', 'INTERNSHIP', 'RESEARCH', 'EXTRAS');
+CREATE TYPE listing_type AS ENUM ('SCHOLARSHIP', 'HACKATHON', 'INTERNSHIP', 'RESEARCH', 'EXTRAS');
 CREATE TYPE approval_status AS ENUM ('PENDING', 'APPROVED');
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
+    provider TEXT NOT NULL DEFAULT 'unknown',
     full_name TEXT NOT NULL DEFAULT '',
     username TEXT NOT NULL GENERATED ALWAYS AS (split_part(email, '@', 1)) STORED,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX users_username_idx ON users (username);
+CREATE UNIQUE INDEX IF NOT EXISTS users_username_idx ON users (username);
 
-CREATE TABLE user_roles (
+CREATE TABLE IF NOT EXISTS user_roles (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role user_role NOT NULL,
     PRIMARY KEY (user_id, role)
 );
 
-CREATE TABLE opportunities (
+CREATE TABLE IF NOT EXISTS listings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL CHECK (char_length(title) BETWEEN 1 AND 250),
     description TEXT NOT NULL CHECK (char_length(description) BETWEEN 1 AND 10000),
@@ -37,11 +38,11 @@ CREATE TABLE opportunities (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE opportunity_types (
-    opportunity_id UUID NOT NULL REFERENCES opportunities(id) ON DELETE CASCADE,
-    type opportunity_type NOT NULL,
-    PRIMARY KEY (opportunity_id, type)
+CREATE TABLE IF NOT EXISTS listing_types (
+    listing_id UUID NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+    type listing_type NOT NULL,
+    PRIMARY KEY (listing_id, type)
 );
 
-CREATE INDEX opportunities_types_idx ON opportunity_types (type);
-CREATE INDEX opportunities_public_rank_idx ON opportunities (approval_status, click_count DESC, created_at DESC);
+CREATE INDEX IF NOT EXISTS listings_types_idx ON listing_types (type);
+CREATE INDEX IF NOT EXISTS listings_public_rank_idx ON listings (approval_status, click_count DESC, created_at DESC);

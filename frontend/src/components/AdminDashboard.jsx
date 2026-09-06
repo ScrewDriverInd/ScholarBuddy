@@ -7,12 +7,12 @@ export default function AdminDashboard({ onBack }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadPendingOpportunities();
+    loadPendingListings();
   }, []);
 
-  const loadPendingOpportunities = async () => {
+  const loadPendingListings = async () => {
     try {
-      const response = await apiFetch("/api/v1/abbujaan/opportunities");
+      const response = await apiFetch("/api/v1/abbujaan/listings");
       setItems(unwrapData(response)?.items || []);
     } catch (err) {
       setError(err.message);
@@ -24,12 +24,12 @@ export default function AdminDashboard({ onBack }) {
   const handleReview = async (id, action) => {
     try {
       await apiFetch(
-        `/api/v1/abbujaan/opportunities/${id}${action === "approve" ? "/approve" : ""}`,
+        `/api/v1/abbujaan/listings/${id}${action === "approve" ? "/approve" : ""}`,
         { method: action === "approve" ? "PATCH" : "DELETE" }
       );
       setItems((current) => current.filter((item) => item.id !== id));
     } catch (err) {
-      setError(`Could not ${action} this opportunity: ${err.message}`);
+      setError(`Could not ${action} this listing: ${err.message}`);
     }
   };
 
@@ -38,12 +38,12 @@ export default function AdminDashboard({ onBack }) {
       <button className="back-button" onClick={onBack}>
         ← back
       </button>
-      <h1>pending opportunities</h1>
+      <h1>pending listings</h1>
       {error && <p className="state-msg state-msg--error">{error}</p>}
       {loading ? (
         <State text="loading" />
       ) : items.length === 0 ? (
-        <State text="no pending opportunities." />
+        <State text="no pending listings." />
       ) : (
         <table className="data-table">
           <thead>
