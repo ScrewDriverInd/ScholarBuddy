@@ -4,10 +4,10 @@ React frontend for ScholarBuddy with Google OAuth2 authentication via Spring Boo
 
 ## Features
 
-- Browse approved opportunities (public)
+- Browse approved listings (public)
 - Filter by type (scholarship, hackathon, internship, research, extras)
 - Google OAuth2 login
-- Admin dashboard for approving/deleting opportunities
+- Admin dashboard for approving/deleting listings
 - Modular component architecture
 - HackerNews-inspired design
 
@@ -24,9 +24,9 @@ React frontend for ScholarBuddy with Google OAuth2 authentication via Spring Boo
 src/
 ├── components/
 │   ├── Header.jsx          # Navigation header with login/logout
-│   ├── Home.jsx            # Main opportunity list with filters
-│   ├── Detail.jsx          # Opportunity detail view
-│   └── AdminDashboard.jsx  # Admin panel for pending opportunities
+│   ├── Home.jsx            # Main listing list with filters
+│   ├── Detail.jsx          # Listing detail view
+│   └── AdminDashboard.jsx  # Admin panel for pending listings
 ├── api.js                  # API client with fetch wrapper
 ├── useAuth.js              # Authentication hook
 ├── App.jsx                 # Main app component
@@ -83,17 +83,17 @@ Vite is configured to proxy these paths to the backend:
 ### API Endpoints Used
 
 **Public:**
-- `GET /api/v1/opportunities` - List approved opportunities
-- `GET /api/v1/opportunities/{id}` - Get opportunity detail
+- `GET /api/v1/listings` - List approved listings
+- `GET /api/v1/listings/{id}` - Get listing detail
 
 **Authenticated:**
 - `GET /api/v1/user/me` - Get current user
 - `POST /logout` - Logout
 
 **Admin:**
-- `GET /api/v1/abbujaan/opportunities` - List pending opportunities
-- `PATCH /api/v1/abbujaan/opportunities/{id}/approve` - Approve
-- `DELETE /api/v1/abbujaan/opportunities/{id}` - Delete
+- `GET /api/v1/abbujaan/listings` - List pending listings
+- `PATCH /api/v1/abbujaan/listings/{id}/approve` - Approve
+- `DELETE /api/v1/abbujaan/listings/{id}` - Delete
 
 ## Components
 
@@ -102,21 +102,21 @@ Navigation bar with app name, tagline, and login/logout button.
 
 ### Home
 Main view showing:
-- Filter chips for opportunity types
-- Paginated table of opportunities
-- Click tracking on opportunity links
+- Filter chips for listing types
+- Paginated table of listings
+- Click tracking on listing links
 
 ### Detail
-Shows full opportunity information:
+Shows full listing information:
 - Title, description, types
 - Eligibility, steps, benefits
-- External link to opportunity
+- External link to listing
 
 ### AdminDashboard
 Admin-only view for:
-- Listing pending opportunities
-- Approving opportunities
-- Deleting opportunities
+- Listing pending listings
+- Approving listings
+- Deleting listings
 
 ## Hooks
 
