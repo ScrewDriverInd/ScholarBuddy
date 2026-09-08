@@ -124,7 +124,7 @@ jobs:
           OWNER="${GITHUB_REPOSITORY_OWNER,,}"
           TAG="${GITHUB_REF_NAME}"
 
-          if [[ ! "$TAG" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+          if [[ ! "$TAG" =~ ^v?[0-9]+(\.[0-9]+){1,2}([.-][0-9A-Za-z.-]+)?$ ]]; then
             echo "Unsupported release tag: $TAG"
             echo "Use a Docker-safe semantic version such as v1.2.3 or 1.2.3-rc.1."
             exit 1
