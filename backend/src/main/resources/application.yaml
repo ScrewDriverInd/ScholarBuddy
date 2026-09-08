@@ -73,6 +73,6 @@ cors:
 
 logging:
   level:
-    com.libreturtle.scholarbuddy: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.security.oauth2: DEBUG
+    com.libreturtle.scholarbuddy: INFO
+    org.springframework.security: WARN
+    org.springframework.security.oauth2: WARN

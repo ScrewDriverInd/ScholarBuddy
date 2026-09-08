@@ -24,8 +24,6 @@ public class CustomOidcUserService extends OidcUserService {
         String email = oidcUser.getAttribute("email");
         String name = oidcUser.getAttribute("name");
 
-        log.info("OIDC loadUser called - email: {}, name: {}", email, name);
-
         if (email == null) {
             log.error("Missing email attribute from OIDC provider");
             throw new OAuth2AuthenticationException("Missing required user attributes");
@@ -35,8 +33,6 @@ public class CustomOidcUserService extends OidcUserService {
         log.info("Creating/updating user with provider: {}", provider);
 
         User user = userService.createOrUpdateUser(email, name != null ? name : "", provider);
-
-        log.info("User created/updated successfully - id: {}, email: {}", user.getId(), user.getEmail());
 
         return new CustomOidcUser(oidcUser, user);
     }
