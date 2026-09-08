@@ -130,8 +130,10 @@ jobs:
             exit 1
           fi
 
+          VERSION="${TAG#v}"
+
           echo "image=ghcr.io/${OWNER}/scholarbuddy" >> "$GITHUB_OUTPUT"
-          echo "version=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push image
         uses: docker/build-push-action@v7
