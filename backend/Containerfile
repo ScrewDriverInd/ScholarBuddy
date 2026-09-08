@@ -1,0 +1,87 @@
+# syntax=docker/dockerfile:1
+
+ARG JAVA_VERSION=25
+ARG GRADLE_VERSION=9.7.1
+
+FROM gradle:${GRADLE_VERSION}-jdk${JAVA_VERSION}-ubi10 AS builder
+
+WORKDIR /workspace
+
+COPY build.gradle.kts ./
+
+RUN --mount=type=cache,target=/home/gradle/.gradle \
+    gradle --no-daemon dependencies
+
+COPY . .
+
+RUN --mount=type=cache,target=/home/gradle/.gradle \
+    gradle --no-daemon clean bootJar
+
+
+FROM bellsoft/liberica-runtime-container:jdk-25-musl AS extractor
+
+WORKDIR /application
+
+COPY --from=builder /workspace/build/libs/*.jar application.jar
+
+RUN java -Djarmode=tools \
+    -jar application.jar \
+    extract \
+    --layers \
+    --destination extracted
+
+
+FROM bellsoft/liberica-runtime-container:jdk-all-25-musl AS jre-builder
+
+WORKDIR /runtime
+
+COPY --from=extractor /application/extracted/ /application/
+
+RUN find /application -maxdepth 4 -type d | sort
+
+RUN jdeps \
+    --multi-release 25 \
+    --ignore-missing-deps \
+    --recursive \
+    --print-module-deps \
+    --class-path '/application/dependencies/lib/*:/application/snapshot-dependencies/lib/*' \
+    /application/application/application.jar \
+    > modules.txt \
+    && echo "Detected JDK modules:" \
+    && cat modules.txt
+
+RUN jlink \
+    --module-path "$JAVA_HOME/jmods" \
+    --add-modules "$(cat modules.txt),java.desktop,jdk.crypto.ec" \
+    --strip-debug \
+    --no-man-pages \
+    --no-header-files \
+    --compress=2 \
+    --output /custom-jre
+
+    
+FROM bellsoft/liberica-runtime-container:jre-25-cds-musl
+
+WORKDIR /app
+
+RUN addgroup -S spring && \
+    adduser -S -G spring spring
+
+COPY --from=jre-builder /custom-jre /opt/java
+
+COPY --from=extractor /application/extracted/dependencies/ ./
+COPY --from=extractor /application/extracted/spring-boot-loader/ ./
+COPY --from=extractor /application/extracted/snapshot-dependencies/ ./
+COPY --from=extractor /application/extracted/application/ ./
+
+ENV JAVA_HOME=/opt/java
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
+
+USER spring:spring
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=3 \
+    CMD wget --spider --quiet http://127.0.0.1:8080/actuator/health || exit 1
+
+ENTRYPOINT ["java", "-jar", "application.jar"]

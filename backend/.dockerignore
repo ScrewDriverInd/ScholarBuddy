@@ -1,0 +1,40 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Gradle
+.gradle
+build
+
+# IDE
+.idea
+.vscode
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Coverage / reports
+coverage
+reports
+
+# Docker
+Dockerfile
+Containerfile
+compose.yml
+compose.yaml
+docker-compose.yml
+
+# Documentation
+README*
+docs
